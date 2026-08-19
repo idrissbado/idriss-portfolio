@@ -8,7 +8,8 @@
     "vercel-build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "seed:admin": "tsx scripts/ensure-admin-user.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",

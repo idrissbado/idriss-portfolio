@@ -7,7 +7,7 @@ const navItems = [
   { href: "/admin/notes", label: "Notes" },
   { href: "/admin/blog", label: "Blog" },
   { href: "/admin/notes/new", label: "New note" },
-  { href: "/admin", label: "Settings" },
+  { href: "/admin/users", label: "Users" },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {

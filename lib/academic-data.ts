@@ -136,7 +136,7 @@ export const profile: Profile = {
     "Idriss Olivier Bado works at the intersection of software engineering, applied mathematics, data science, and institutional AI. He designs backend systems, full-stack products, analytics platforms, and ML workflows that are grounded in rigor, maintainability, and operational reliability. His experience spans public-sector software, mobile-money systems, industrial data infrastructure, and research-driven analytics.",
   email: "idrissbadoolivier@gmail.com",
   location: "Abidjan, Côte d’Ivoire · Remote-ready",
-  orcid: "https://orcid.org/0000-0003-4582-6001",
+  orcid: "https://orcid.org/my-orcid?orcid=0009-0001-2097-545X",
   scholarUrl: "https://scholar.google.com/citations?user=tvjdX4gAAAAJ&hl=en",
   githubUrl: "https://github.com/idrissbado",
   linkedinUrl: "https://www.linkedin.com/in/idriss-olivier-bado/",

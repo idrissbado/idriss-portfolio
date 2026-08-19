@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, FileText, FolderKanban, NotebookPen, Presentation, ShieldCheck } from "lucide-react";
+import { auth } from "@/lib/auth";
 
 const stats = [
   { label: "Total publications", value: "2", icon: FileText },
@@ -29,7 +30,12 @@ const quickActions = [
   },
 ];
 
-export default function AdminDashboardPage() {
+export default async function AdminDashboardPage() {
+  const session = await auth();
+  const userName = session?.user?.name ?? "Administrator";
+  const userEmail = session?.user?.email ?? "drissbadoolivier@gmail.com";
+  const userRole = session?.user?.role ?? "admin";
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="mb-10 overflow-hidden rounded-[32px] border border-stone-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.06)] dark:border-stone-800 dark:bg-stone-900">
@@ -39,8 +45,13 @@ export default function AdminDashboardPage() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-200">Admin</p>
               <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">Editorial control room</h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-200">
-                Manage the public narrative, academic writing, and research communication from a single premium workspace built for a serious professional identity.
+                Welcome back, {userName}. Manage the public narrative, academic writing, and research communication from a personalized workspace.
               </p>
+
+              <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-200">
+                <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5">{userEmail}</span>
+                <span className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1.5 text-emerald-200">{userRole}</span>
+              </div>
 
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link
