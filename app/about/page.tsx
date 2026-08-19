@@ -81,10 +81,10 @@ export default function AboutPage() {
           <section>
             <h2 className="text-2xl font-semibold text-stone-900 dark:text-stone-50">Links</h2>
             <div className="mt-5 flex flex-wrap gap-3">
-              <a href={profile.githubUrl} className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium transition hover:border-stone-400 dark:border-stone-700">GitHub</a>
-              <a href={profile.linkedinUrl} className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium transition hover:border-stone-400 dark:border-stone-700">LinkedIn</a>
-              <a href={profile.scholarUrl} className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium transition hover:border-stone-400 dark:border-stone-700">Google Scholar</a>
-              <a href={profile.orcid} className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium transition hover:border-stone-400 dark:border-stone-700">ORCID</a>
+              <a href={profile.githubUrl} target="_blank" rel="noopener noreferrer" className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium transition hover:border-stone-400 dark:border-stone-700">GitHub</a>
+              <a href={profile.linkedinUrl} target="_blank" rel="noopener noreferrer" className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium transition hover:border-stone-400 dark:border-stone-700">LinkedIn</a>
+              <a href={profile.scholarUrl} target="_blank" rel="noopener noreferrer" className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium transition hover:border-stone-400 dark:border-stone-700">Google Scholar</a>
+              <a href={profile.orcid} target="_blank" rel="noopener noreferrer" className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium transition hover:border-stone-400 dark:border-stone-700">ORCID</a>
               <Link href="/cv" className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium transition hover:border-stone-400 dark:border-stone-700">CV</Link>
             </div>
           </section>

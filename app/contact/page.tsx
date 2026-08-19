@@ -80,10 +80,10 @@ export default function ContactPage() {
           </div>
 
           <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
-            <a href={profile.githubUrl} className="block hover:text-slate-900 dark:hover:text-slate-50">GitHub</a>
-            <a href={profile.linkedinUrl} className="block hover:text-slate-900 dark:hover:text-slate-50">LinkedIn</a>
-            <a href={profile.scholarUrl} className="block hover:text-slate-900 dark:hover:text-slate-50">Google Scholar</a>
-            <a href={profile.orcid} className="block hover:text-slate-900 dark:hover:text-slate-50">ORCID</a>
+            <a href={profile.githubUrl} target="_blank" rel="noopener noreferrer" className="block hover:text-slate-900 dark:hover:text-slate-50">GitHub</a>
+            <a href={profile.linkedinUrl} target="_blank" rel="noopener noreferrer" className="block hover:text-slate-900 dark:hover:text-slate-50">LinkedIn</a>
+            <a href={profile.scholarUrl} target="_blank" rel="noopener noreferrer" className="block hover:text-slate-900 dark:hover:text-slate-50">Google Scholar</a>
+            <a href={profile.orcid} target="_blank" rel="noopener noreferrer" className="block hover:text-slate-900 dark:hover:text-slate-50">ORCID</a>
           </div>
         </div>
 
