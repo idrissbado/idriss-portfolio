@@ -30,12 +30,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
                 Secure access
               </div>
-              <a
+              <Link
                 href="/api/auth/signout?callbackUrl=/"
                 className="rounded-full border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 transition hover:border-stone-400 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-200"
               >
                 Log out
-              </a>
+              </Link>
             </div>
           </div>
 
