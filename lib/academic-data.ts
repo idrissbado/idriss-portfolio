@@ -137,7 +137,7 @@ export const profile: Profile = {
   email: "idrissbadoolivier@gmail.com",
   location: "Abidjan, Côte d’Ivoire · Remote-ready",
   orcid: "https://orcid.org/0000-0003-4582-6001",
-  scholarUrl: "https://scholar.google.com",
+  scholarUrl: "https://scholar.google.com/citations?user=tvjdX4gAAAAJ&hl=en",
   githubUrl: "https://github.com/idrissbado",
   linkedinUrl: "https://www.linkedin.com/in/idriss-olivier-bado/",
   researchStatement:
