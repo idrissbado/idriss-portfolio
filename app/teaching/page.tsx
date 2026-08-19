@@ -53,9 +53,8 @@ export default function TeachingPage() {
           Teaching
         </h1>
         <p className="mt-5 text-lg leading-8 text-stone-600 dark:text-stone-300">
-          My teaching lies at the intersection of mathematics, statistics, and computation, with emphasis on
-          rigorous foundations and practical modeling. I am especially interested in teaching methods that connect
-          theory with data-oriented problem solving and real-world analytical questions.
+          I teach at the point where mathematical rigor meets applied modeling: probability, statistics,
+          scientific computing, and the practical use of data to answer real analytical questions.
         </p>
       </header>
 

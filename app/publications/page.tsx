@@ -4,32 +4,30 @@ import { publications } from "@/lib/academic-data";
 export default function PublicationsPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
-      <header className="mb-10">
+      <header className="mb-10 max-w-4xl">
         <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">Publications</p>
-        <h1 className="mt-3 text-4xl font-semibold tracking-tight text-stone-950 dark:text-stone-50">Publication repository</h1>
+        <h1 className="mt-3 text-4xl font-semibold tracking-tight text-stone-950 dark:text-stone-50 sm:text-5xl">Publication repository</h1>
+        <p className="mt-4 text-lg leading-8 text-stone-600 dark:text-stone-300">
+          A concise bibliography of work spanning number theory, topology, statistical inference, and applied machine learning.
+        </p>
       </header>
 
-      <div className="rounded-3xl border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-800 dark:bg-stone-900">
-        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="w-full max-w-md rounded-full border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-500 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300">
-            Search publications
-          </div>
-          <div className="flex flex-wrap gap-2 text-xs uppercase tracking-[0.12em] text-stone-500 dark:text-stone-400">
-            <span className="rounded-full border border-stone-200 px-2 py-1 dark:border-stone-700">Year</span>
-            <span className="rounded-full border border-stone-200 px-2 py-1 dark:border-stone-700">Type</span>
-            <span className="rounded-full border border-stone-200 px-2 py-1 dark:border-stone-700">Status</span>
-          </div>
+      <div className="rounded-[30px] border border-stone-200 bg-white/80 p-4 shadow-[0_20px_60px_rgba(15,23,42,0.04)] backdrop-blur-sm dark:border-stone-800 dark:bg-stone-900/80 sm:p-5">
+        <div className="mb-6 flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">
+          <span className="rounded-full border border-stone-200 bg-stone-50 px-2.5 py-1.5 dark:border-stone-700 dark:bg-stone-800">Journal</span>
+          <span className="rounded-full border border-stone-200 bg-stone-50 px-2.5 py-1.5 dark:border-stone-700 dark:bg-stone-800">Preprint</span>
+          <span className="rounded-full border border-stone-200 bg-stone-50 px-2.5 py-1.5 dark:border-stone-700 dark:bg-stone-800">Research note</span>
         </div>
 
         <div className="space-y-5">
           {publications.map((publication) => (
-            <article key={publication.id} className="rounded-2xl border border-stone-200 p-6 dark:border-stone-800">
+            <article key={publication.id} className="rounded-[24px] border border-stone-200 bg-stone-50/80 p-5 shadow-sm dark:border-stone-800 dark:bg-stone-950/70 sm:p-6">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="max-w-4xl">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500 dark:text-stone-400">
                     {publication.publicationType} • {publication.status}
                   </div>
-                  <Link href={`/publications/${publication.slug}`} className="mt-2 block text-2xl font-semibold text-stone-900 hover:text-stone-700 dark:text-stone-50 dark:hover:text-stone-200">
+                  <Link href={`/publications/${publication.slug}`} className="mt-2 block text-2xl font-semibold tracking-[-0.04em] text-stone-900 transition hover:text-stone-700 dark:text-stone-50 dark:hover:text-stone-200">
                     {publication.title}
                   </Link>
                   <p className="mt-2 text-sm text-stone-600 dark:text-stone-300">{publication.authors}</p>
@@ -41,13 +39,13 @@ export default function PublicationsPage() {
 
                 <div className="flex flex-wrap gap-2 lg:flex-col">
                   {publication.doi ? (
-                    <a href={`https://doi.org/${publication.doi}`} className="rounded-full border border-stone-300 px-3 py-2 text-xs font-medium dark:border-stone-700">DOI</a>
+                    <a href={`https://doi.org/${publication.doi}`} className="rounded-full border border-stone-300 bg-white px-3 py-2 text-xs font-medium text-stone-700 transition hover:border-stone-400 hover:text-stone-950 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:hover:text-white">DOI</a>
                   ) : null}
                   {publication.pdfUrl ? (
-                    <a href={publication.pdfUrl} className="rounded-full border border-stone-300 px-3 py-2 text-xs font-medium dark:border-stone-700">PDF</a>
+                    <a href={publication.pdfUrl} className="rounded-full border border-stone-300 bg-white px-3 py-2 text-xs font-medium text-stone-700 transition hover:border-stone-400 hover:text-stone-950 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:hover:text-white">PDF</a>
                   ) : null}
                   {publication.externalUrl ? (
-                    <a href={publication.externalUrl} className="rounded-full border border-stone-300 px-3 py-2 text-xs font-medium dark:border-stone-700">External page</a>
+                    <a href={publication.externalUrl} className="rounded-full border border-stone-300 bg-white px-3 py-2 text-xs font-medium text-stone-700 transition hover:border-stone-400 hover:text-stone-950 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:hover:text-white">External page</a>
                   ) : null}
                 </div>
               </div>
