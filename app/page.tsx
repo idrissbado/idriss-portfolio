@@ -117,6 +117,7 @@ export default function Home() {
               </Link>
               <a
                 href={profile.cvPdfUrl}
+                download="idriss-olivier-bado-cv.pdf"
                 className="inline-flex items-center gap-2 rounded-full border border-stone-300 bg-white/80 px-5 py-3 text-sm font-medium text-stone-800 shadow-sm transition hover:-translate-y-0.5 hover:border-stone-400 dark:border-stone-700 dark:bg-stone-900/80 dark:text-stone-100"
               >
                 Download CV

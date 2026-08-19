@@ -8,7 +8,13 @@ export default function CvPage() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">Curriculum vitae</p>
           <h1 className="mt-3 text-4xl font-semibold tracking-tight text-stone-950 dark:text-stone-50">{profile.fullName}</h1>
         </div>
-        <a href={profile.cvPdfUrl} className="rounded-full bg-stone-900 px-5 py-3 text-sm font-medium text-white dark:bg-stone-100 dark:text-stone-900">Download PDF CV</a>
+        <a
+          href={profile.cvPdfUrl}
+          download="idriss-olivier-bado-cv.pdf"
+          className="rounded-full bg-stone-900 px-5 py-3 text-sm font-medium text-white dark:bg-stone-100 dark:text-stone-900"
+        >
+          Download PDF CV
+        </a>
       </header>
 
       <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
