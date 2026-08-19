@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { profile, researchAreas } from "@/lib/academic-data";
 
@@ -8,7 +9,7 @@ export default function AboutPage() {
         <aside className="rounded-[30px] border border-stone-200 bg-white/85 p-5 shadow-[0_20px_50px_rgba(15,23,42,0.06)] backdrop-blur-sm dark:border-stone-800 dark:bg-stone-900/80 sm:p-6">
           <div className="mb-6 flex justify-center lg:justify-start">
             <div className="overflow-hidden rounded-full border border-stone-300 bg-stone-100 shadow-[0_20px_45px_rgba(15,23,42,0.08)] dark:border-stone-700 dark:bg-stone-800">
-              <img src="/IDRISS.jpg" alt="Idriss Olivier Bado" className="h-28 w-28 object-cover object-center sm:h-32 sm:w-32" />
+              <Image src="/IDRISS.jpg" alt="Idriss Olivier Bado" width={160} height={160} className="h-28 w-28 object-cover object-center sm:h-32 sm:w-32" />
             </div>
           </div>
           <div className="space-y-4 text-sm text-stone-600 dark:text-stone-300">
