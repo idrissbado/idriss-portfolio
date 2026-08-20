@@ -51,6 +51,16 @@ describe("community features", () => {
     expect(content).toContain("MathRenderer");
   });
 
+  it("connects forum navigation to real filtering behavior", () => {
+    const forumClientPath = path.resolve(__dirname, "../components/forum/forum-page-client.tsx");
+    const content = readFileSync(forumClientPath, "utf8");
+
+    expect(content).toContain("activeNav");
+    expect(content).toContain("topic.replies.length === 0");
+    expect(content).toContain("setActiveNav");
+    expect(content).toContain("Users");
+  });
+
   it("does not ship placeholder forum topic data", () => {
     const storePath = path.resolve(__dirname, "../lib/community-store.ts");
     const content = readFileSync(storePath, "utf8");

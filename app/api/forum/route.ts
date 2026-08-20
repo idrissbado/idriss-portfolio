@@ -8,6 +8,7 @@ const topicSchema = z.object({
   authorName: z.string().trim().min(2, "Your name is required."),
   authorEmail: z.string().trim().email("Please provide a valid email address.").optional().or(z.literal("")),
   category: z.string().trim().max(60).optional().or(z.literal("")),
+  tags: z.array(z.string().trim().min(1)).max(5).optional(),
   excerpt: z.string().trim().max(250).optional().or(z.literal("")),
 });
 
@@ -19,7 +20,28 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const parsed = topicSchema.safeParse(body);
+    const rawTags = Array.isArray(body?.tags)
+      ? body.tags
+      : typeof body?.tags === "string"
+        ? body.tags.split(/[\s,]+/)
+        : [];
+
+    const normalizedTags = Array.from(
+      new Set(
+        rawTags
+          .map((tag: unknown) => String(tag ?? "").trim().toLowerCase())
+          .filter(Boolean)
+          .slice(0, 5),
+      ),
+    );
+
+    const payload = {
+      ...body,
+      category: body?.category || normalizedTags[0] || "General",
+      tags: normalizedTags,
+    };
+
+    const parsed = topicSchema.safeParse(payload);
 
     if (!parsed.success) {
       return NextResponse.json(
@@ -34,6 +56,7 @@ export async function POST(request: Request) {
       authorName: parsed.data.authorName,
       authorEmail: parsed.data.authorEmail || undefined,
       category: parsed.data.category || undefined,
+      tags: parsed.data.tags,
       excerpt: parsed.data.excerpt || undefined,
     });
 

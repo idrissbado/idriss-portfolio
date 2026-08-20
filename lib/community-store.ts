@@ -26,6 +26,7 @@ export type ForumTopic = {
   slug: string;
   title: string;
   category: string;
+  tags: string[];
   excerpt: string | null;
   content: string;
   authorName: string;
@@ -104,6 +105,7 @@ const normalizeTopic = (topic: {
   slug: string;
   title: string;
   category?: string | null;
+  tags?: string[] | null;
   excerpt?: string | null;
   content: string;
   authorName: string;
@@ -120,20 +122,32 @@ const normalizeTopic = (topic: {
     createdAt: Date;
     updatedAt: Date;
   }>;
-}): ForumTopic => ({
-  id: topic.id,
-  slug: topic.slug,
-  title: topic.title,
-  category: topic.category ?? "General",
-  excerpt: topic.excerpt ?? null,
-  content: topic.content,
-  authorName: topic.authorName,
-  authorEmail: topic.authorEmail ?? null,
-  published: Boolean(topic.published),
-  createdAt: new Date(topic.createdAt).toISOString(),
-  updatedAt: new Date(topic.updatedAt).toISOString(),
-  replies: (topic.replies ?? []).map(normalizeReply),
-});
+}): ForumTopic => {
+  const category = topic.category ?? "General";
+  const tags = Array.isArray(topic.tags) && topic.tags.length > 0
+    ? topic.tags
+    : category
+      .split(/[^a-zA-Z0-9]+/)
+      .map((tag) => tag.trim().toLowerCase())
+      .filter(Boolean)
+      .slice(0, 5);
+
+  return {
+    id: topic.id,
+    slug: topic.slug,
+    title: topic.title,
+    category,
+    tags,
+    excerpt: topic.excerpt ?? null,
+    content: topic.content,
+    authorName: topic.authorName,
+    authorEmail: topic.authorEmail ?? null,
+    published: Boolean(topic.published),
+    createdAt: new Date(topic.createdAt).toISOString(),
+    updatedAt: new Date(topic.updatedAt).toISOString(),
+    replies: (topic.replies ?? []).map(normalizeReply),
+  };
+};
 
 export async function getSubscribers() {
   try {
@@ -294,6 +308,7 @@ export async function createForumTopic(input: {
   authorName: string;
   authorEmail?: string;
   category?: string;
+  tags?: string[];
   excerpt?: string;
 }) {
   const title = input.title.trim();
@@ -304,8 +319,12 @@ export async function createForumTopic(input: {
     return null;
   }
 
+  const normalizedTags = Array.from(
+    new Set((input.tags ?? []).map((tag) => tag.trim().toLowerCase()).filter(Boolean).slice(0, 5)),
+  );
+
   const slug = slugify(title);
-  const category = input.category?.trim() || "General";
+  const category = input.category?.trim() || normalizedTags[0] || "General";
   const excerpt = input.excerpt?.trim() || content.slice(0, 180);
 
   try {
@@ -331,6 +350,7 @@ export async function createForumTopic(input: {
       slug,
       title,
       category,
+      tags: normalizedTags,
       excerpt,
       content,
       authorName,
