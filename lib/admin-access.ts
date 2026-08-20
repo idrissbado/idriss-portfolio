@@ -52,7 +52,7 @@ export async function findUserByEmail(email: string) {
 
 export async function createUserAccount(input: { email: string; name?: string; password: string; role?: string }) {
   const normalizedEmail = input.email.trim().toLowerCase();
-  const role = input.role ?? "admin";
+  const role = input.role ?? "member";
   const passwordHash = await bcrypt.hash(input.password, 10);
 
   const fallbackConfig = getFallbackAdminConfig();
@@ -61,7 +61,7 @@ export async function createUserAccount(input: { email: string; name?: string; p
       id: "fallback-admin",
       email: normalizedEmail,
       name: input.name || fallbackConfig.name,
-      role: "admin",
+      role,
       passwordHash: fallbackConfig.passwordHash,
     };
     fallbackUsers.set(normalizedEmail, fallbackUser);

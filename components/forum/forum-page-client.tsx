@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import type { ForumTopic } from "@/lib/community-store";
 
 const defaultForm = {
@@ -13,30 +14,58 @@ const defaultForm = {
 };
 
 export function ForumPageClient({ initialTopics }: { initialTopics: ForumTopic[] }) {
+  const { data: session, status } = useSession();
   const [topics, setTopics] = useState(initialTopics);
   const [form, setForm] = useState(defaultForm);
   const [submitting, setSubmitting] = useState(false);
-  const [status, setStatus] = useState<{ type: "idle" | "success" | "error"; message: string }>({
+  const [statusMessage, setStatusMessage] = useState<{ type: "idle" | "success" | "error"; message: string }>({
     type: "idle",
     message: "",
   });
 
+  useEffect(() => {
+    if (!session?.user) {
+      return;
+    }
+
+    setForm((current) => ({
+      ...current,
+      authorName: current.authorName || String(session.user?.name ?? ""),
+      authorEmail: current.authorEmail || String(session.user?.email ?? ""),
+    }));
+  }, [session]);
+
+  const isAuthenticated = status === "authenticated";
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (!isAuthenticated) {
+      setStatusMessage({
+        type: "error",
+        message: "Please log in or create an account before posting a question.",
+      });
+      return;
+    }
+
     setSubmitting(true);
-    setStatus({ type: "idle", message: "" });
+    setStatusMessage({ type: "idle", message: "" });
 
     try {
       const response = await fetch("/api/forum", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          authorName: form.authorName || session?.user?.name || "Community member",
+          authorEmail: form.authorEmail || session?.user?.email || undefined,
+        }),
       });
 
       const payload = (await response.json()) as { topic?: ForumTopic; error?: string };
 
       if (!response.ok) {
-        throw new Error(payload.error ?? "The discussion could not be published.");
+        throw new Error(payload.error ?? "The question could not be published.");
       }
 
       if (payload.topic) {
@@ -44,11 +73,11 @@ export function ForumPageClient({ initialTopics }: { initialTopics: ForumTopic[]
       }
 
       setForm(defaultForm);
-      setStatus({ type: "success", message: "Your discussion topic has been published." });
+      setStatusMessage({ type: "success", message: "Your question has been published." });
     } catch (error) {
-      setStatus({
+      setStatusMessage({
         type: "error",
-        message: error instanceof Error ? error.message : "The discussion could not be published.",
+        message: error instanceof Error ? error.message : "The question could not be published.",
       });
     } finally {
       setSubmitting(false);
@@ -58,100 +87,124 @@ export function ForumPageClient({ initialTopics }: { initialTopics: ForumTopic[]
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
       <header className="mb-8">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-500">Forum</p>
-        <h1 className="mt-3 text-4xl font-semibold tracking-tight text-stone-950 dark:text-stone-50">Math and ideas in discussion</h1>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-500">Math forum</p>
+        <h1 className="mt-3 text-4xl font-semibold tracking-tight text-stone-950 dark:text-stone-50">Ask a question and discuss ideas</h1>
         <p className="mt-4 max-w-2xl text-base leading-7 text-stone-600 dark:text-stone-300">
-          A public space for conversations around mathematics, research, statistics, and applied scientific thinking.
+          A community space for mathematical reasoning, research discussions, statistics, and applied AI questions.
         </p>
       </header>
 
       <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
         <section className="rounded-[28px] border border-stone-200 bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.04)] dark:border-stone-800 dark:bg-stone-900">
-          <h2 className="text-xl font-semibold text-stone-900 dark:text-stone-50">Start a new discussion</h2>
-          <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-            <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-              Topic title
-              <input
-                value={form.title}
-                onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-                className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-stone-500 dark:border-stone-700 dark:bg-stone-950"
-                placeholder="A question, paper idea, or reading topic"
-                required
-              />
-            </label>
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <h2 className="text-xl font-semibold text-stone-900 dark:text-stone-50">Ask a question</h2>
+            {isAuthenticated ? (
+              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
+                Logged in
+              </span>
+            ) : null}
+          </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+          {!isAuthenticated ? (
+            <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 dark:border-stone-800 dark:bg-stone-950/60">
+              <p className="text-sm leading-6 text-stone-700 dark:text-stone-300">
+                Sign in to ask questions, answer others, and keep your posts tied to your account.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Link href="/login" className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 dark:bg-stone-100 dark:text-stone-900">
+                  Log in
+                </Link>
+                <Link href="/register" className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 hover:border-stone-500 hover:text-stone-950 dark:border-stone-700 dark:text-stone-200 dark:hover:border-stone-500 dark:hover:text-white">
+                  Create account
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="mt-5 space-y-4">
               <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-                Your name
+                Question title
                 <input
-                  value={form.authorName}
-                  onChange={(event) => setForm((current) => ({ ...current, authorName: event.target.value }))}
+                  value={form.title}
+                  onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
                   className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-stone-500 dark:border-stone-700 dark:bg-stone-950"
-                  placeholder="Jane Doe"
+                  placeholder="Example: Are there compactness conditions that guarantee uniqueness?"
                   required
                 />
               </label>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                  Your name
+                  <input
+                    value={form.authorName}
+                    onChange={(event) => setForm((current) => ({ ...current, authorName: event.target.value }))}
+                    className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-stone-500 dark:border-stone-700 dark:bg-stone-950"
+                    placeholder="Jane Doe"
+                    required
+                  />
+                </label>
+                <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                  Email
+                  <input
+                    type="email"
+                    value={form.authorEmail}
+                    onChange={(event) => setForm((current) => ({ ...current, authorEmail: event.target.value }))}
+                    className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-stone-500 dark:border-stone-700 dark:bg-stone-950"
+                    placeholder="name@example.com"
+                  />
+                </label>
+              </div>
+
               <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-                Email
-                <input
-                  type="email"
-                  value={form.authorEmail}
-                  onChange={(event) => setForm((current) => ({ ...current, authorEmail: event.target.value }))}
+                Category
+                <select
+                  value={form.category}
+                  onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))}
                   className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-stone-500 dark:border-stone-700 dark:bg-stone-950"
-                  placeholder="name@example.com"
+                >
+                  <option value="General">General</option>
+                  <option value="Mathematics">Mathematics</option>
+                  <option value="Statistics">Statistics</option>
+                  <option value="AI">AI</option>
+                  <option value="Resources">Resources</option>
+                </select>
+              </label>
+
+              <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                Details
+                <textarea
+                  value={form.content}
+                  onChange={(event) => setForm((current) => ({ ...current, content: event.target.value }))}
+                  className="mt-2 min-h-32 w-full rounded-2xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-stone-500 dark:border-stone-700 dark:bg-stone-950"
+                  placeholder="Describe your question and what you have already explored..."
+                  required
                 />
               </label>
-            </div>
 
-            <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-              Category
-              <select
-                value={form.category}
-                onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))}
-                className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-stone-500 dark:border-stone-700 dark:bg-stone-950"
+              <button
+                type="submit"
+                disabled={submitting}
+                className="rounded-full bg-stone-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-stone-100 dark:text-stone-900"
               >
-                <option value="General">General</option>
-                <option value="Mathematics">Mathematics</option>
-                <option value="Statistics">Statistics</option>
-                <option value="AI">AI</option>
-                <option value="Resources">Resources</option>
-              </select>
-            </label>
+                {submitting ? "Publishing..." : "Publish question"}
+              </button>
+            </form>
+          )}
 
-            <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-              Details
-              <textarea
-                value={form.content}
-                onChange={(event) => setForm((current) => ({ ...current, content: event.target.value }))}
-                className="mt-2 min-h-32 w-full rounded-2xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-stone-500 dark:border-stone-700 dark:bg-stone-950"
-                placeholder="Describe your question, idea, or reference request..."
-                required
-              />
-            </label>
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="rounded-full bg-stone-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-stone-100 dark:text-stone-900"
+          {statusMessage.message ? (
+            <p
+              aria-live="polite"
+              className={`mt-4 text-sm ${statusMessage.type === "success" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}
             >
-              {submitting ? "Publishing..." : "Publish discussion"}
-            </button>
-
-            {status.message ? (
-              <p
-                aria-live="polite"
-                className={`text-sm ${status.type === "success" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}
-              >
-                {status.message}
-              </p>
-            ) : null}
-          </form>
+              {statusMessage.message}
+            </p>
+          ) : null}
         </section>
 
         <section className="space-y-4">
           {topics.length === 0 ? (
             <div className="rounded-[28px] border border-stone-200 bg-white p-6 text-sm text-stone-600 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-300">
-              No discussions yet. Start the first one.
+              No questions yet. The first post will open the thread.
             </div>
           ) : (
             topics.map((topic) => (

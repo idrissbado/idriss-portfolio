@@ -13,6 +13,24 @@ describe("community features", () => {
     expect(content).toContain("Discussion");
   });
 
+  it("supports a public login flow for community members", () => {
+    const loginPath = path.resolve(__dirname, "../app/login/page.tsx");
+    expect(existsSync(loginPath)).toBe(true);
+
+    const content = readFileSync(loginPath, "utf8");
+    expect(content).toContain("signIn");
+    expect(content).toContain("Create account");
+  });
+
+  it("supports a public registration flow for forum users", () => {
+    const registerPath = path.resolve(__dirname, "../app/register/page.tsx");
+    expect(existsSync(registerPath)).toBe(true);
+
+    const content = readFileSync(registerPath, "utf8");
+    expect(content).toContain("Create account");
+    expect(content).toContain("register");
+  });
+
   it("exposes the subscriber API endpoint", () => {
     const routePath = path.resolve(__dirname, "../app/api/subscribers/route.ts");
 

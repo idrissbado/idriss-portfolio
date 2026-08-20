@@ -9,7 +9,7 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   pages: {
-    signIn: "/admin/login",
+    signIn: "/login",
   },
   providers: [
     CredentialsProvider({
@@ -42,7 +42,7 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           name: user.name ?? user.email,
-          role: user.role ?? "admin",
+          role: user.role ?? "member",
         };
       },
     }),
@@ -51,7 +51,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = user.role ?? "admin";
+        token.role = user.role ?? "member";
         token.name = String(user.name ?? user.email ?? "");
       }
       return token;
@@ -60,7 +60,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = String(token.id ?? session.user.email ?? "");
         session.user.name = String(token.name ?? session.user.name ?? "");
-        session.user.role = String(token.role ?? "admin");
+        session.user.role = String(token.role ?? "member");
       }
       return session;
     },

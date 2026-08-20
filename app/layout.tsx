@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AcademicFooter } from "@/components/layout/academic-footer";
 import { AcademicHeader } from "@/components/layout/academic-header";
+import { AppSessionProvider } from "@/components/providers/session-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,11 +35,13 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} h-full`}>
       <body className="min-h-full bg-stone-50 text-stone-900 antialiased dark:bg-stone-950 dark:text-stone-100">
-        <div className="flex min-h-screen flex-col">
-          <AcademicHeader />
-          <main className="flex-1">{children}</main>
-          <AcademicFooter />
-        </div>
+        <AppSessionProvider>
+          <div className="flex min-h-screen flex-col">
+            <AcademicHeader />
+            <main className="flex-1">{children}</main>
+            <AcademicFooter />
+          </div>
+        </AppSessionProvider>
       </body>
     </html>
   );
