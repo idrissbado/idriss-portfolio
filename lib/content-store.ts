@@ -80,6 +80,111 @@ export async function getResearchNotes() {
   }
 }
 
+export async function getResearchNoteById(idOrSlug: string) {
+  try {
+    const note = await prisma.researchNote.findFirst({
+      where: {
+        OR: [{ id: idOrSlug }, { slug: idOrSlug }],
+      },
+      include: {
+        tags: { include: { tag: true } },
+      },
+    });
+
+    if (note) {
+      return mapDbNote(note);
+    }
+  } catch {
+    // Fall back to static data if the database is not reachable.
+  }
+
+  return fallbackResearchNotes.find((item) => item.id === idOrSlug || item.slug === idOrSlug) ?? null;
+}
+
+export async function updateResearchNote(idOrSlug: string, input: {
+  title: string;
+  subtitle?: string;
+  abstract: string;
+  authors: string;
+  subject?: string;
+  content: string;
+  status?: "DRAFT" | "PUBLIC" | "PRIVATE" | "ARCHIVED";
+  tags?: string[];
+  featured?: boolean;
+}) {
+  const title = input.title.trim();
+  const slug = slugify(title);
+  const subject = input.subject?.trim() || "General";
+  const authors = input.authors?.trim() || "Driss Olivier Bado";
+  const content = input.content.trim();
+
+  try {
+    const existing = await prisma.researchNote.findFirst({
+      where: {
+        OR: [{ id: idOrSlug }, { slug: idOrSlug }],
+      },
+    });
+
+    if (!existing) {
+      const fallbackNote = fallbackResearchNotes.find((item) => item.id === idOrSlug || item.slug === idOrSlug);
+      if (!fallbackNote) {
+        return null;
+      }
+
+      return {
+        ...fallbackNote,
+        title,
+        slug: fallbackNote.slug,
+        subtitle: input.subtitle?.trim() || fallbackNote.subtitle,
+        abstract: input.abstract.trim(),
+        authors,
+        subject,
+        content,
+        status: normalizeStatus(input.status ?? fallbackNote.status),
+        tags: Array.from(new Set((input.tags ?? fallbackNote.tags).map((tag) => tag.trim()).filter(Boolean))),
+        featured: Boolean(input.featured),
+      } satisfies ResearchNote;
+    }
+
+    const updated = await prisma.researchNote.update({
+      where: { id: existing.id },
+      data: {
+        title,
+        slug,
+        subtitle: input.subtitle?.trim() || undefined,
+        abstract: input.abstract.trim(),
+        authors,
+        subject,
+        status: input.status ?? existing.status,
+        content,
+        featured: Boolean(input.featured),
+        tags: {
+          deleteMany: {},
+          create: (input.tags ?? [subject]).filter(Boolean).map((tagName) => {
+            const cleanTag = tagName.trim();
+            return {
+              tag: {
+                connectOrCreate: {
+                  where: { name: cleanTag },
+                  create: { name: cleanTag, slug: slugify(cleanTag) },
+                },
+              },
+            };
+          }),
+        },
+      },
+      include: {
+        tags: { include: { tag: true } },
+      },
+    });
+
+    return mapDbNote(updated);
+  } catch (error) {
+    console.error("Failed to update research note:", error);
+    return null;
+  }
+}
+
 export async function createResearchNote(input: {
   title: string;
   subtitle?: string;
