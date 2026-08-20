@@ -508,6 +508,151 @@ export async function deleteForumTopic(input: {
   }
 }
 
+export async function updateForumReply(input: {
+  slug: string;
+  replyId: string;
+  content?: string;
+  authorName?: string;
+  authorEmail?: string;
+  editorEmail?: string;
+}) {
+  const slug = input.slug.trim();
+  const replyId = input.replyId.trim();
+  const content = input.content?.trim();
+  const authorName = input.authorName?.trim();
+  const authorEmail = input.authorEmail?.trim().toLowerCase();
+  const editorEmail = input.editorEmail?.trim().toLowerCase();
+
+  if (!slug || !replyId || (!content && !authorName && !authorEmail)) {
+    return null;
+  }
+
+  try {
+    const topic = await prisma.forumTopic.findUnique({ where: { slug } });
+    if (!topic) {
+      return null;
+    }
+
+    const reply = await prisma.forumReply.findUnique({ where: { id: replyId } });
+    if (!reply || reply.topicId !== topic.id) {
+      return null;
+    }
+
+    const isAllowedByEmail = !!editorEmail && !!reply.authorEmail && editorEmail === reply.authorEmail.trim().toLowerCase();
+    const isAllowedByName = !!authorName && reply.authorName.trim().toLowerCase() === authorName.trim().toLowerCase();
+    const isAllowedByAuthorEmail = !!authorEmail && !!reply.authorEmail && authorEmail === reply.authorEmail.trim().toLowerCase();
+
+    if (!isAllowedByEmail && !isAllowedByName && !isAllowedByAuthorEmail) {
+      return null;
+    }
+
+    const updated = await prisma.forumReply.update({
+      where: { id: replyId },
+      data: {
+        content: content ?? reply.content,
+        authorName: authorName ?? reply.authorName,
+        authorEmail: authorEmail || reply.authorEmail || null,
+      },
+    });
+
+    return normalizeReply(updated);
+  } catch (error) {
+    console.error("Forum reply update failed:", error);
+    const topic = fallbackTopics.find((item) => item.slug === slug);
+    if (!topic) {
+      return null;
+    }
+
+    const target = topic.replies.find((item) => item.id === replyId);
+    if (!target) {
+      return null;
+    }
+
+    const isAllowedByEmail = !!editorEmail && !!target.authorEmail && editorEmail === target.authorEmail.trim().toLowerCase();
+    const isAllowedByName = !!authorName && target.authorName.trim().toLowerCase() === authorName.trim().toLowerCase();
+    const isAllowedByAuthorEmail = !!authorEmail && !!target.authorEmail && authorEmail === target.authorEmail.trim().toLowerCase();
+
+    if (!isAllowedByEmail && !isAllowedByName && !isAllowedByAuthorEmail) {
+      return null;
+    }
+
+    const updatedReply = {
+      ...target,
+      content: content ?? target.content,
+      authorName: authorName ?? target.authorName,
+      authorEmail: authorEmail || target.authorEmail || null,
+      updatedAt: new Date().toISOString(),
+    } satisfies ForumReplyRecord;
+
+    topic.replies = topic.replies.map((item) => item.id === replyId ? updatedReply : item);
+    return updatedReply;
+  }
+}
+
+export async function deleteForumReply(input: {
+  slug: string;
+  replyId: string;
+  authorEmail?: string;
+  editorEmail?: string;
+  authorName?: string;
+}) {
+  const slug = input.slug.trim();
+  const replyId = input.replyId.trim();
+  const authorEmail = input.authorEmail?.trim().toLowerCase();
+  const editorEmail = input.editorEmail?.trim().toLowerCase();
+  const authorName = input.authorName?.trim();
+
+  if (!slug || !replyId) {
+    return false;
+  }
+
+  try {
+    const topic = await prisma.forumTopic.findUnique({ where: { slug } });
+    if (!topic) {
+      return false;
+    }
+
+    const reply = await prisma.forumReply.findUnique({ where: { id: replyId } });
+    if (!reply || reply.topicId !== topic.id) {
+      return false;
+    }
+
+    const isAllowedByEmail = !!editorEmail && !!reply.authorEmail && editorEmail === reply.authorEmail.trim().toLowerCase();
+    const isAllowedByName = !!authorName && reply.authorName.trim().toLowerCase() === authorName.trim().toLowerCase();
+    const isAllowedByAuthorEmail = !!authorEmail && !!reply.authorEmail && authorEmail === reply.authorEmail.trim().toLowerCase();
+
+    if (!isAllowedByEmail && !isAllowedByName && !isAllowedByAuthorEmail) {
+      return false;
+    }
+
+    await prisma.forumReply.delete({ where: { id: replyId } });
+    return true;
+  } catch (error) {
+    console.error("Forum reply deletion failed:", error);
+    const topic = fallbackTopics.find((item) => item.slug === slug);
+    if (!topic) {
+      return false;
+    }
+
+    const targetIndex = topic.replies.findIndex((item) => item.id === replyId);
+    if (targetIndex < 0) {
+      return false;
+    }
+
+    const target = topic.replies[targetIndex];
+    const isAllowedByEmail = !!editorEmail && !!target.authorEmail && editorEmail === target.authorEmail.trim().toLowerCase();
+    const isAllowedByName = !!authorName && target.authorName.trim().toLowerCase() === authorName.trim().toLowerCase();
+    const isAllowedByAuthorEmail = !!authorEmail && !!target.authorEmail && authorEmail === target.authorEmail.trim().toLowerCase();
+
+    if (!isAllowedByEmail && !isAllowedByName && !isAllowedByAuthorEmail) {
+      return false;
+    }
+
+    topic.replies.splice(targetIndex, 1);
+    return true;
+  }
+}
+
 export async function createForumReply(input: {
   slug: string;
   authorName: string;
