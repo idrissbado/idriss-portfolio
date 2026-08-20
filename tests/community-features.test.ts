@@ -40,6 +40,14 @@ describe("community features", () => {
     expect(content).toContain("token");
   });
 
+  it("does not ship placeholder forum topic data", () => {
+    const storePath = path.resolve(__dirname, "../lib/community-store.ts");
+    const content = readFileSync(storePath, "utf8");
+
+    expect(content).not.toContain("Introductions and community goals");
+    expect(content).not.toContain("Reading list for math and data science");
+  });
+
   it("exposes the subscriber API endpoint", () => {
     const routePath = path.resolve(__dirname, "../app/api/subscribers/route.ts");
 

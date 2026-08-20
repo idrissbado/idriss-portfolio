@@ -38,48 +38,7 @@ export type ForumTopic = {
 
 const fallbackSubscribers: SubscriberRecord[] = [];
 
-const fallbackTopics: ForumTopic[] = [
-  {
-    id: "fallback-topic-1",
-    slug: "introductions-and-community-goals",
-    title: "Introductions and community goals",
-    category: "General",
-    excerpt: "A warm welcome to the community and a space to share ideas and references.",
-    content:
-      "Welcome to this discussion space. Share your interests, ask for references, and discuss research questions in mathematics, statistics, and AI.",
-    authorName: "Idriss Olivier Bado",
-    authorEmail: "idrissbadoolivier@gmail.com",
-    published: true,
-    createdAt: new Date("2025-01-18T09:00:00.000Z").toISOString(),
-    updatedAt: new Date("2025-01-18T09:00:00.000Z").toISOString(),
-    replies: [
-      {
-        id: "fallback-reply-1",
-        topicId: "fallback-topic-1",
-        authorName: "Community member",
-        authorEmail: null,
-        content: "I am excited to explore mathematical discussions around models, proofs, and applied statistics.",
-        createdAt: new Date("2025-01-18T10:00:00.000Z").toISOString(),
-        updatedAt: new Date("2025-01-18T10:00:00.000Z").toISOString(),
-      },
-    ],
-  },
-  {
-    id: "fallback-topic-2",
-    slug: "reading-list-for-math-and-data-science",
-    title: "Reading list for math and data science",
-    category: "Resources",
-    excerpt: "Share readings, lectures, and practical references for mathematical modeling and data analysis.",
-    content:
-      "This thread is for recommendations on books, notes, and papers that mix rigorous mathematics with applied data science.",
-    authorName: "Idriss Olivier Bado",
-    authorEmail: "idrissbadoolivier@gmail.com",
-    published: true,
-    createdAt: new Date("2025-01-10T09:00:00.000Z").toISOString(),
-    updatedAt: new Date("2025-01-10T09:00:00.000Z").toISOString(),
-    replies: [],
-  },
-];
+const fallbackTopics: ForumTopic[] = [];
 
 const slugify = (value: string) =>
   value
@@ -242,10 +201,6 @@ export async function getForumTopics() {
       },
     });
 
-    if (!topics.length) {
-      return fallbackTopics;
-    }
-
     return topics.map(normalizeTopic);
   } catch {
     return fallbackTopics;
@@ -264,7 +219,7 @@ export async function getForumTopicBySlug(slug: string) {
     });
 
     if (!topic) {
-      return fallbackTopics.find((item) => item.slug === slug) ?? null;
+      return null;
     }
 
     return normalizeTopic(topic);
