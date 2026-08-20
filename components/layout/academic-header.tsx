@@ -10,6 +10,7 @@ const navItems = [
   { href: "/research", label: "Research" },
   { href: "/publications", label: "Publications" },
   { href: "/blog", label: "Writing" },
+  { href: "/forum", label: "Forum" },
   { href: "/teaching", label: "Teaching" },
   { href: "/projects", label: "Projects" },
   { href: "/cv", label: "CV" },

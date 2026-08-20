@@ -22,6 +22,7 @@ export function AcademicFooter() {
             <li><Link href="/research" className="transition hover:text-stone-950 dark:hover:text-white">Research</Link></li>
             <li><Link href="/publications" className="transition hover:text-stone-950 dark:hover:text-white">Publications</Link></li>
             <li><Link href="/blog" className="transition hover:text-stone-950 dark:hover:text-white">Writing</Link></li>
+            <li><Link href="/forum" className="transition hover:text-stone-950 dark:hover:text-white">Forum</Link></li>
             <li><Link href="/teaching" className="transition hover:text-stone-950 dark:hover:text-white">Teaching</Link></li>
           </ul>
         </div>
