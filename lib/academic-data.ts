@@ -341,9 +341,9 @@ export const projects: Project[] = [
       "A reproducible framework for exploring economic structure with explainable machine learning and topological insights.",
     technicalChallenges:
       "Balancing model interpretability with predictive performance and handling noisy, irregular time-series data.",
-    githubUrl: "https://github.com",
-    liveUrl: "https://example.com",
-    documentationUrl: "https://example.com/docs",
+    githubUrl: "https://github.com/idrissbado",
+    liveUrl: "https://research.idrissbado.blog",
+    documentationUrl: "https://research.idrissbado.blog/research",
     gallery: [],
     featured: true,
   },

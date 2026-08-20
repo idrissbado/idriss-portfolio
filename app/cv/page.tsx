@@ -64,8 +64,8 @@ export default function CvPage() {
             <h2 className="text-2xl font-semibold text-stone-900 dark:text-stone-50">Education</h2>
             <div className="mt-5 space-y-5 text-sm text-stone-600 dark:text-stone-300">
               <div>
-                <div className="font-semibold text-stone-900 dark:text-stone-50">Placeholder academic background</div>
-                <div className="mt-1 text-stone-500 dark:text-stone-400">To be updated in the administration system.</div>
+                <div className="font-semibold text-stone-900 dark:text-stone-50">Applied mathematics, statistics, and computational systems</div>
+                <div className="mt-1 text-stone-500 dark:text-stone-400">Research-oriented training in mathematical modeling, data analysis, and systems design.</div>
               </div>
             </div>
           </section>

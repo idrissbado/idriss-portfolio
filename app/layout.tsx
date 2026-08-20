@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   },
   description:
     "Academic research website, publications repository, research notes, software and AI engineering portfolio for Idriss Olivier Bado.",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://example.com"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://research.idrissbado.blog"),
   openGraph: {
     title: "Idriss Olivier Bado",
     description:

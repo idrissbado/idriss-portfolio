@@ -359,7 +359,7 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
                     <input
                       value={questionDraft.imageUrl}
                       onChange={(event) => setQuestionDraft((current) => ({ ...current, imageUrl: event.target.value }))}
-                      placeholder="https://example.com/image.png"
+                      placeholder="Paste a public image URL"
                       className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-stone-500 dark:border-stone-700 dark:bg-stone-900"
                     />
                     {questionDraft.imageUrl ? (

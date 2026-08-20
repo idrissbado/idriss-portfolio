@@ -79,6 +79,21 @@ describe("community features", () => {
     expect(content).not.toContain("Reading list for math and data science");
   });
 
+  it("removes placeholder public-site text and example URLs", () => {
+    const cvPath = path.resolve(__dirname, "../app/cv/page.tsx");
+    const layoutPath = path.resolve(__dirname, "../app/layout.tsx");
+    const academicDataPath = path.resolve(__dirname, "../lib/academic-data.ts");
+
+    const cvContent = readFileSync(cvPath, "utf8");
+    const layoutContent = readFileSync(layoutPath, "utf8");
+    const academicDataContent = readFileSync(academicDataPath, "utf8");
+
+    expect(cvContent).not.toContain("Placeholder academic background");
+    expect(cvContent).not.toContain("To be updated in the administration system.");
+    expect(layoutContent).not.toContain("https://example.com");
+    expect(academicDataContent).not.toContain("https://example.com");
+  });
+
   it("allows an author to edit an existing question", () => {
     const routePath = path.resolve(__dirname, "../app/api/forum/[slug]/route.ts");
     expect(existsSync(routePath)).toBe(true);
