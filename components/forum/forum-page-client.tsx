@@ -68,7 +68,18 @@ export function ForumPageClient({
     { key: "users", label: "Users", icon: "◍" },
   ] as const;
   const tabOptions = ["interesting", "bountied", "hot", "week", "month"] as const;
-  const tagChips = ["all", "real-analysis", "calculus", "linear-algebra", "probability", "geometry", "optimization"];
+  const tagChips = [
+    "all",
+    "real-analysis",
+    "calculus",
+    "linear-algebra",
+    "probability",
+    "geometry",
+    "optimization",
+    "number-theory",
+    "topology",
+    "differential-equations",
+  ];
   const hotQuestions = topics.slice(0, 5).map((topic) => topic.title);
   const featuredMembers = initialStats?.featuredMembers ?? [];
   const questionCount = Math.max(initialStats?.questionCount ?? topics.length, 0);
@@ -230,27 +241,27 @@ export function ForumPageClient({
   };
 
   return (
-    <div className="forum-shell min-h-screen bg-[#f5f1ec]">
+    <div className="forum-shell min-h-screen bg-[radial-gradient(circle_at_top,_rgba(191,219,254,0.28),_rgba(255,255,255,0)_30%),linear-gradient(180deg,_#f8f6f3_0%,_#f2efe9_100%)] text-stone-900">
       <div className="mx-auto max-w-[1500px] px-4 py-5 sm:px-6 lg:px-8">
-        <header className="premium-surface mb-6 rounded-[28px] border border-stone-200/90 bg-white/80 p-4 shadow-[0_18px_45px_rgba(15,23,42,0.08)] backdrop-blur-sm dark:border-stone-800 dark:bg-stone-900/80">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <header className="mb-6 overflow-hidden rounded-[28px] border border-stone-200/80 bg-[#0f172a] shadow-[0_22px_60px_rgba(15,23,42,0.18)]">
+          <div className="flex flex-col gap-4 border-b border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,1),rgba(30,41,59,1),rgba(15,118,110,0.9))] p-4 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex items-center gap-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-stone-800 to-stone-500 text-lg font-semibold text-white shadow-sm dark:from-stone-200 dark:to-stone-500 dark:text-stone-950">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-lg font-semibold text-white shadow-inner ring-1 ring-white/10">
                 ∑
               </div>
               <div>
-                <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-stone-500 dark:text-stone-400">Research forum</div>
-                <div className="text-xl font-semibold tracking-tight text-stone-900 dark:text-stone-50">Mathematics</div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-300">Research forum</div>
+                <div className="text-xl font-semibold tracking-tight text-white">Mathematics</div>
               </div>
             </div>
 
             <div className="flex flex-1 items-center justify-end gap-3">
-              <label className="hidden w-full max-w-xl items-center gap-3 rounded-full border border-stone-200 bg-stone-100 px-4 py-2.5 text-sm text-stone-500 md:flex dark:border-stone-700 dark:bg-stone-950/60 dark:text-stone-400">
-                <span className="text-base">⌕</span>
+              <label className="hidden w-full max-w-xl items-center gap-3 rounded-full border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-slate-200 md:flex">
+                <span className="text-base text-slate-100">⌕</span>
                 <input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  className="w-full border-0 bg-transparent text-sm text-stone-700 outline-none placeholder:text-stone-500 dark:text-stone-200 dark:placeholder:text-stone-500"
+                  className="w-full border-0 bg-transparent text-sm text-white outline-none placeholder:text-slate-300"
                   placeholder="Search on Mathematics..."
                   aria-label="Search forum questions"
                 />
@@ -258,15 +269,15 @@ export function ForumPageClient({
 
               {!isAuthenticated ? (
                 <div className="flex items-center gap-2">
-                  <Link href="/login" className="rounded-full border border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 transition hover:border-stone-500 hover:text-stone-950 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200">
+                  <Link href="/login" className="rounded-full border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/10">
                     Log in
                   </Link>
-                  <Link href="/register" className="rounded-full bg-stone-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-stone-700 dark:bg-stone-100 dark:text-stone-900">
+                  <Link href="/register" className="rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-cyan-500/20 transition hover:brightness-110">
                     Sign up
                   </Link>
                 </div>
               ) : (
-                <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
+                <div className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200">
                   Member access
                 </div>
               )}
@@ -274,8 +285,27 @@ export function ForumPageClient({
           </div>
         </header>
 
+        <div className="mb-6 rounded-[22px] border border-stone-200 bg-white/85 px-3 py-3 shadow-[0_12px_30px_rgba(15,23,42,0.05)] backdrop-blur-sm dark:border-stone-800 dark:bg-stone-900/80">
+          <div className="flex flex-wrap items-center gap-2">
+            {['All', 'Starred', 'Questions', 'Unanswered', 'Users'].map((item, index) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setActiveNav(index === 2 ? "questions" : index === 3 ? "unanswered" : index === 4 ? "users" : "home")}
+                className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                  index === 0
+                    ? "bg-[#0a95ff] text-white shadow-[0_0_0_1px_rgba(10,149,255,0.2)]"
+                    : "bg-transparent text-stone-600 hover:bg-stone-100 hover:text-stone-900 dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-white"
+                }`}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="grid gap-6 xl:grid-cols-[240px_minmax(0,1fr)_310px]">
-          <aside className="forum-panel-glow rounded-[26px] border border-stone-200 bg-white/80 p-4 shadow-[0_18px_35px_rgba(15,23,42,0.04)] dark:border-stone-800 dark:bg-stone-900/80">
+          <aside className="rounded-[26px] border border-stone-200 bg-white/80 p-4 shadow-[0_12px_30px_rgba(15,23,42,0.05)] backdrop-blur-sm dark:border-stone-800 dark:bg-stone-900/80">
             <nav className="space-y-1">
               {navItems.map((item) => (
                 <button
@@ -284,7 +314,7 @@ export function ForumPageClient({
                   onClick={() => setActiveNav(item.key)}
                   className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition ${
                     activeNav === item.key
-                      ? "bg-stone-100 text-stone-900 shadow-inner dark:bg-stone-800 dark:text-stone-50"
+                      ? "bg-gradient-to-r from-indigo-50 to-white text-stone-900 shadow-[inset_0_0_0_1px_rgba(99,102,241,0.15)] ring-1 ring-indigo-100 dark:bg-stone-800 dark:text-stone-50"
                       : "text-stone-600 hover:bg-stone-50 hover:text-stone-950 dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-white"
                   }`}
                 >
@@ -329,7 +359,7 @@ export function ForumPageClient({
           </aside>
 
           <main className="space-y-5">
-            <section className="premium-surface forum-panel-glow rounded-[28px] border border-stone-200 bg-white/80 p-5 shadow-[0_18px_35px_rgba(15,23,42,0.04)] backdrop-blur-sm dark:border-stone-800 dark:bg-stone-900/80">
+            <section className="rounded-[28px] border border-stone-200 bg-white/85 p-5 shadow-[0_20px_40px_rgba(15,23,42,0.06)] backdrop-blur-sm dark:border-stone-800 dark:bg-stone-900/80">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">Explore questions</p>
@@ -337,14 +367,14 @@ export function ForumPageClient({
                 </div>
 
                 {!isAuthenticated ? (
-                  <Link href="/register" className="inline-flex items-center justify-center rounded-full bg-stone-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-stone-700 dark:bg-stone-100 dark:text-stone-900">
+                  <Link href="/register" className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-slate-900/15 transition hover:brightness-110 dark:bg-stone-100 dark:text-stone-900">
                     {askedLabel}
                   </Link>
                 ) : (
                   <button
                     type="button"
                     onClick={openComposer}
-                    className="inline-flex items-center justify-center rounded-full bg-stone-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-stone-700 dark:bg-stone-100 dark:text-stone-900"
+                    className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-slate-900/15 transition hover:brightness-110 dark:bg-stone-100 dark:text-stone-900"
                   >
                     {askedLabel}
                   </button>
@@ -419,7 +449,7 @@ export function ForumPageClient({
 
               <div className="mt-5 grid gap-3 sm:grid-cols-3">
                 {forumStats.map((stat) => (
-                  <div key={stat.label} className="rounded-2xl border border-stone-200 bg-stone-50/80 p-3 text-center dark:border-stone-800 dark:bg-stone-950/60">
+                  <div key={stat.label} className="rounded-2xl border border-stone-200 bg-gradient-to-br from-white to-stone-50 p-3 text-center shadow-sm dark:border-stone-800 dark:from-stone-950 dark:to-stone-900">
                     <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">{stat.label}</div>
                     <div className="mt-2 text-xl font-semibold text-stone-900 dark:text-stone-50">{stat.value}</div>
                   </div>
@@ -579,7 +609,7 @@ export function ForumPageClient({
               </section>
             ) : null}
 
-            <section className="rounded-[28px] border border-stone-200 bg-white/80 p-4 shadow-[0_18px_35px_rgba(15,23,42,0.04)] dark:border-stone-800 dark:bg-stone-900/80">
+            <section className="rounded-[28px] border border-stone-200 bg-white/85 p-4 shadow-[0_18px_35px_rgba(15,23,42,0.04)] dark:border-stone-800 dark:bg-stone-900/80">
               <div className="mb-4 flex flex-wrap items-center gap-2">
                 {tabOptions.map((tab) => (
                   <button
@@ -628,7 +658,7 @@ export function ForumPageClient({
               ) : (
                 <div className="space-y-4">
                   {filteredTopics.map((topic) => (
-                    <article key={topic.id} className="forum-panel-glow rounded-[24px] border border-stone-200 bg-[#fffdfb] p-4 shadow-[0_12px_30px_rgba(15,23,42,0.03)] transition hover:border-stone-300 hover:shadow-[0_18px_35px_rgba(15,23,42,0.04)] dark:border-stone-800 dark:bg-stone-950/40">
+                    <article key={topic.id} className="rounded-[18px] border border-stone-200 bg-[#fffdfb] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.03)] transition duration-200 hover:-translate-y-0.5 hover:border-stone-300 hover:shadow-[0_16px_30px_rgba(15,23,42,0.05)] dark:border-stone-800 dark:bg-stone-950/40">
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
@@ -649,7 +679,7 @@ export function ForumPageClient({
                           </div>
                         </div>
 
-                        <div className="flex min-w-[86px] flex-col items-center justify-center rounded-2xl border border-stone-200 bg-stone-50 px-3 py-2 text-center shadow-inner dark:border-stone-700 dark:bg-stone-900">
+                        <div className="flex min-w-[86px] flex-col items-center justify-center rounded-2xl border border-stone-200 bg-gradient-to-b from-stone-50 to-white px-3 py-2 text-center shadow-inner dark:border-stone-700 dark:from-stone-900 dark:to-stone-950">
                           <div className="text-[11px] uppercase tracking-[0.18em] text-stone-500 dark:text-stone-400">votes</div>
                           <div className="mt-1 text-2xl font-semibold text-stone-900 dark:text-stone-50">{Math.max(topic.replies.length, 1)}</div>
                         </div>
@@ -657,7 +687,7 @@ export function ForumPageClient({
 
                       <div className="mt-4 flex flex-col gap-3 border-t border-stone-200 pt-3 sm:flex-row sm:items-center sm:justify-between dark:border-stone-800">
                         <div className="flex flex-wrap gap-2">
-                          {topic.category.split(/\s+/).slice(0, 3).map((tag) => (
+                          {(topic.tags && topic.tags.length > 0 ? topic.tags : [topic.category]).slice(0, 4).map((tag) => (
                             <span key={tag} className="rounded-full border border-stone-200 bg-white px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-stone-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300">
                               {tag.toLowerCase()}
                             </span>
@@ -708,7 +738,7 @@ export function ForumPageClient({
                 <div className="mt-4 space-y-3">
                   {featuredMembers.length > 0 ? (
                     featuredMembers.map((member) => (
-                      <div key={member.name} className="rounded-2xl border border-stone-200 bg-stone-50 p-3 dark:border-stone-800 dark:bg-stone-950/60">
+                      <div key={member.name} className="rounded-2xl border border-stone-200 bg-gradient-to-br from-white to-stone-50 p-3 shadow-sm dark:border-stone-800 dark:from-stone-950 dark:to-stone-900">
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-3">
                             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-stone-800 to-stone-500 text-[10px] font-semibold uppercase text-white dark:from-stone-200 dark:to-stone-500 dark:text-stone-950">
