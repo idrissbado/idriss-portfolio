@@ -36,6 +36,7 @@ export function ForumPageClient({
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("interesting");
   const [selectedTag, setSelectedTag] = useState("all");
+  const [showComposer, setShowComposer] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: "idle" | "success" | "error"; message: string }>({
     type: "idle",
@@ -122,6 +123,7 @@ export function ForumPageClient({
       }
 
       setForm(defaultForm);
+      setShowComposer(false);
       setStatusMessage({ type: "success", message: "Your question has been published." });
     } catch (error) {
       setStatusMessage({
@@ -134,6 +136,15 @@ export function ForumPageClient({
   };
 
   const askedLabel = isAuthenticated ? "Ask question" : "Create account";
+
+  const openComposer = () => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    setShowComposer(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   return (
     <div className="forum-shell min-h-screen bg-[#f5f1ec]">
@@ -248,7 +259,7 @@ export function ForumPageClient({
                 ) : (
                   <button
                     type="button"
-                    onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                    onClick={openComposer}
                     className="inline-flex items-center justify-center rounded-full bg-stone-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-stone-700 dark:bg-stone-100 dark:text-stone-900"
                   >
                     {askedLabel}
@@ -282,6 +293,110 @@ export function ForumPageClient({
                 ))}
               </div>
             </section>
+
+            {isAuthenticated && showComposer ? (
+              <section id="question-composer" className="rounded-[28px] border border-stone-200 bg-white/90 p-5 shadow-[0_18px_35px_rgba(15,23,42,0.04)] dark:border-stone-800 dark:bg-stone-900/90">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">New question</p>
+                    <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900 dark:text-stone-50">Ask a mathematical question</h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowComposer(false)}
+                    className="rounded-full border border-stone-300 px-3 py-1.5 text-xs font-medium text-stone-700 hover:border-stone-400 dark:border-stone-700 dark:text-stone-200"
+                  >
+                    Close
+                  </button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
+                    <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                      Question title
+                      <input
+                        value={form.title}
+                        onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
+                        className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-stone-500 dark:border-stone-700 dark:bg-stone-950"
+                        placeholder="Example: Is this inequality true for all positive reals?"
+                        required
+                      />
+                    </label>
+
+                    <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                      Category
+                      <select
+                        value={form.category}
+                        onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))}
+                        className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-stone-500 dark:border-stone-700 dark:bg-stone-950"
+                      >
+                        <option value="General">General</option>
+                        <option value="Real Analysis">Real Analysis</option>
+                        <option value="Calculus">Calculus</option>
+                        <option value="Linear Algebra">Linear Algebra</option>
+                        <option value="Probability">Probability</option>
+                        <option value="Geometry">Geometry</option>
+                        <option value="Optimization">Optimization</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                    Question details
+                    <textarea
+                      value={form.content}
+                      onChange={(event) => setForm((current) => ({ ...current, content: event.target.value }))}
+                      className="mt-2 min-h-40 w-full rounded-[22px] border border-stone-300 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-stone-500 dark:border-stone-700 dark:bg-stone-950"
+                      placeholder="Write your full question here. You can use LaTeX such as $\frac{a}{b}$, $x^2 + y^2 = z^2$, or $$\sum_{n=1}^{\infty} \frac{1}{n^2}.$$"
+                      required
+                    />
+                  </label>
+
+                  <div className="rounded-[22px] border border-stone-200 bg-stone-50 p-4 dark:border-stone-800 dark:bg-stone-950/60">
+                    <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-stone-500 dark:text-stone-400">Live preview</div>
+                    {form.content.trim() ? (
+                      <MathRenderer content={form.content} />
+                    ) : (
+                      <p className="text-sm leading-6 text-stone-500 dark:text-stone-400">Your question preview will appear here as you type. Use LaTeX to format formulas clearly.</p>
+                    )}
+                  </div>
+
+                  {statusMessage.message ? (
+                    <p
+                      aria-live="polite"
+                      className={`text-sm ${statusMessage.type === "success" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}
+                    >
+                      {statusMessage.message}
+                    </p>
+                  ) : null}
+
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-xs leading-5 text-stone-500 dark:text-stone-400">
+                      LaTeX is supported: wrap inline math with $...$ and display math with $$...$$.
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForm(defaultForm);
+                          setStatusMessage({ type: "idle", message: "" });
+                        }}
+                        className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 hover:border-stone-400 dark:border-stone-700 dark:text-stone-200"
+                      >
+                        Clear
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={submitting}
+                        className="rounded-full bg-stone-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-stone-100 dark:text-stone-900"
+                      >
+                        {submitting ? "Publishing..." : "Publish question"}
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </section>
+            ) : null}
 
             <section className="rounded-[28px] border border-stone-200 bg-white/80 p-4 shadow-[0_18px_35px_rgba(15,23,42,0.04)] dark:border-stone-800 dark:bg-stone-900/80">
               <div className="mb-4 flex flex-wrap items-center gap-2">

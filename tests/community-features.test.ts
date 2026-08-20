@@ -40,6 +40,17 @@ describe("community features", () => {
     expect(content).toContain("token");
   });
 
+  it("includes a public Ask question composer with LaTeX guidance", () => {
+    const forumClientPath = path.resolve(__dirname, "../components/forum/forum-page-client.tsx");
+    expect(existsSync(forumClientPath)).toBe(true);
+
+    const content = readFileSync(forumClientPath, "utf8");
+    expect(content).toContain("Ask question");
+    expect(content).toContain("textarea");
+    expect(content).toContain("LaTeX");
+    expect(content).toContain("MathRenderer");
+  });
+
   it("does not ship placeholder forum topic data", () => {
     const storePath = path.resolve(__dirname, "../lib/community-store.ts");
     const content = readFileSync(storePath, "utf8");
