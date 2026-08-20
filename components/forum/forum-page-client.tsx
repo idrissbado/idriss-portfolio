@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { MathRenderer } from "@/components/math/math-renderer";
 import type { CommunityStats, ForumTopic } from "@/lib/community-store";
@@ -37,6 +37,7 @@ export function ForumPageClient({
   const [activeTab, setActiveTab] = useState("interesting");
   const [selectedTag, setSelectedTag] = useState("all");
   const [showComposer, setShowComposer] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: "idle" | "success" | "error"; message: string }>({
     type: "idle",
@@ -136,6 +137,31 @@ export function ForumPageClient({
   };
 
   const askedLabel = isAuthenticated ? "Ask question" : "Create account";
+
+  const insertSnippet = (before: string, after = "", placeholder = "") => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setForm((current) => ({ ...current, content: `${current.content}${before}${placeholder}${after}` }));
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+
+    setForm((current) => {
+      const value = current.content;
+      const selected = value.slice(start, end) || placeholder;
+      const nextValue = `${value.slice(0, start)}${before}${selected}${after}${value.slice(end)}`;
+      return { ...current, content: nextValue };
+    });
+
+    requestAnimationFrame(() => {
+      textarea.focus();
+      const nextStart = start + before.length;
+      const nextEnd = nextStart + (form.content.slice(start, end) || placeholder).length;
+      textarea.setSelectionRange(nextStart, nextEnd);
+    });
+  };
 
   const openComposer = () => {
     if (!isAuthenticated) {
@@ -341,16 +367,39 @@ export function ForumPageClient({
                     </label>
                   </div>
 
-                  <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-                    Question details
-                    <textarea
-                      value={form.content}
-                      onChange={(event) => setForm((current) => ({ ...current, content: event.target.value }))}
-                      className="mt-2 min-h-40 w-full rounded-[22px] border border-stone-300 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-stone-500 dark:border-stone-700 dark:bg-stone-950"
-                      placeholder="Write your full question here. You can use LaTeX such as $\frac{a}{b}$, $x^2 + y^2 = z^2$, or $$\sum_{n=1}^{\infty} \frac{1}{n^2}.$$"
-                      required
-                    />
-                  </label>
+                  <div className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                    <div className="mb-2 flex flex-wrap gap-2">
+                      {[
+                        { label: "Bold", before: "**", after: "**", placeholder: "bold text" },
+                        { label: "Italic", before: "*", after: "*", placeholder: "italic text" },
+                        { label: "Bullet", before: "\n- ", after: "", placeholder: "list item" },
+                        { label: "Quote", before: "\n> ", after: "", placeholder: "quoted text" },
+                        { label: "Inline $..$", before: "$", after: "$", placeholder: "x^2 + y^2 = z^2" },
+                        { label: "Display $$..$$", before: "$$\n", after: "\n$$", placeholder: "\\sum_{n=1}^{\\infty} \\frac{1}{n^2}" },
+                      ].map((tool) => (
+                        <button
+                          key={tool.label}
+                          type="button"
+                          onClick={() => insertSnippet(tool.before, tool.after, tool.placeholder)}
+                          className="rounded-full border border-stone-300 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-stone-700 hover:border-stone-400 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200"
+                        >
+                          {tool.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                      Question details
+                      <textarea
+                        ref={textareaRef}
+                        value={form.content}
+                        onChange={(event) => setForm((current) => ({ ...current, content: event.target.value }))}
+                        className="mt-2 min-h-40 w-full rounded-[22px] border border-stone-300 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-stone-500 dark:border-stone-700 dark:bg-stone-950"
+                        placeholder="Write your full question here. You can use LaTeX such as $\frac{a}{b}$, $x^2 + y^2 = z^2$, or $$\sum_{n=1}^{\infty} \frac{1}{n^2}.$$"
+                        required
+                      />
+                    </label>
+                  </div>
 
                   <div className="rounded-[22px] border border-stone-200 bg-stone-50 p-4 dark:border-stone-800 dark:bg-stone-950/60">
                     <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-stone-500 dark:text-stone-400">Live preview</div>
