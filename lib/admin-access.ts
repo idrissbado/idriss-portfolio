@@ -102,16 +102,9 @@ export async function createUserAccount(input: {
     });
 
     return user as AdminUser;
-  } catch {
-    const fallbackUser: AdminUser = {
-      id: `fallback-${Date.now()}`,
-      email: normalizedEmail,
-      name: input.name || normalizedEmail,
-      role,
-      passwordHash,
-    };
-    fallbackUsers.set(normalizedEmail, fallbackUser);
-    return fallbackUser;
+  } catch (error) {
+    console.error("Database error while creating user account:", error);
+    throw new Error("The database is unavailable right now. Please try again in a moment.");
   }
 }
 
