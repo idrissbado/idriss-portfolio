@@ -10,6 +10,15 @@ const topicSchema = z.object({
   category: z.string().trim().max(60).optional().or(z.literal("")),
   tags: z.array(z.string().trim().min(1)).max(5).optional(),
   excerpt: z.string().trim().max(250).optional().or(z.literal("")),
+  imageUrl: z
+    .string()
+    .trim()
+    .refine(
+      (value) => value === "" || /^https?:\/\//i.test(value) || /^data:image\//i.test(value),
+      "Please provide a valid image URL or data URL.",
+    )
+    .optional(),
+  imageAltText: z.string().trim().max(120).optional().or(z.literal("")),
 });
 
 export async function GET() {
@@ -39,6 +48,8 @@ export async function POST(request: Request) {
       ...body,
       category: body?.category || normalizedTags[0] || "General",
       tags: normalizedTags,
+      imageUrl: typeof body?.imageUrl === "string" ? body.imageUrl.trim() : "",
+      imageAltText: typeof body?.imageAltText === "string" ? body.imageAltText.trim() : "",
     };
 
     const parsed = topicSchema.safeParse(payload);
@@ -58,6 +69,8 @@ export async function POST(request: Request) {
       category: parsed.data.category || undefined,
       tags: parsed.data.tags,
       excerpt: parsed.data.excerpt || undefined,
+      imageUrl: parsed.data.imageUrl || undefined,
+      imageAltText: parsed.data.imageAltText || undefined,
     });
 
     if (!topic) {

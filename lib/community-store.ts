@@ -17,6 +17,8 @@ export type ForumReplyRecord = {
   authorName: string;
   authorEmail: string | null;
   content: string;
+  imageUrl: string | null;
+  imageAltText: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -29,6 +31,8 @@ export type ForumTopic = {
   tags: string[];
   excerpt: string | null;
   content: string;
+  imageUrl: string | null;
+  imageAltText: string | null;
   authorName: string;
   authorEmail: string | null;
   published: boolean;
@@ -88,6 +92,8 @@ const normalizeReply = (reply: {
   authorName: string;
   authorEmail?: string | null;
   content: string;
+  imageUrl?: string | null;
+  imageAltText?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }): ForumReplyRecord => ({
@@ -96,6 +102,8 @@ const normalizeReply = (reply: {
   authorName: reply.authorName,
   authorEmail: reply.authorEmail ?? null,
   content: reply.content,
+  imageUrl: reply.imageUrl ?? null,
+  imageAltText: reply.imageAltText ?? null,
   createdAt: new Date(reply.createdAt).toISOString(),
   updatedAt: new Date(reply.updatedAt).toISOString(),
 });
@@ -108,6 +116,8 @@ const normalizeTopic = (topic: {
   tags?: string[] | null;
   excerpt?: string | null;
   content: string;
+  imageUrl?: string | null;
+  imageAltText?: string | null;
   authorName: string;
   authorEmail?: string | null;
   published?: boolean | null;
@@ -119,6 +129,8 @@ const normalizeTopic = (topic: {
     authorName: string;
     authorEmail?: string | null;
     content: string;
+    imageUrl?: string | null;
+    imageAltText?: string | null;
     createdAt: Date;
     updatedAt: Date;
   }>;
@@ -140,6 +152,8 @@ const normalizeTopic = (topic: {
     tags,
     excerpt: topic.excerpt ?? null,
     content: topic.content,
+    imageUrl: topic.imageUrl ?? null,
+    imageAltText: topic.imageAltText ?? null,
     authorName: topic.authorName,
     authorEmail: topic.authorEmail ?? null,
     published: Boolean(topic.published),
@@ -147,6 +161,23 @@ const normalizeTopic = (topic: {
     updatedAt: new Date(topic.updatedAt).toISOString(),
     replies: (topic.replies ?? []).map(normalizeReply),
   };
+};
+
+const sanitizeImageUrl = (value?: string | null) => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (/^https?:\/\//i.test(trimmed) || /^data:image\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  return null;
 };
 
 export async function getSubscribers() {
@@ -310,6 +341,8 @@ export async function createForumTopic(input: {
   category?: string;
   tags?: string[];
   excerpt?: string;
+  imageUrl?: string;
+  imageAltText?: string;
 }) {
   const title = input.title.trim();
   const content = input.content.trim();
@@ -323,6 +356,8 @@ export async function createForumTopic(input: {
     new Set((input.tags ?? []).map((tag) => tag.trim().toLowerCase()).filter(Boolean).slice(0, 5)),
   );
 
+  const imageUrl = sanitizeImageUrl(input.imageUrl);
+  const imageAltText = input.imageAltText?.trim() || "Attached image";
   const slug = slugify(title);
   const category = input.category?.trim() || normalizedTags[0] || "General";
   const excerpt = input.excerpt?.trim() || content.slice(0, 180);
@@ -335,6 +370,8 @@ export async function createForumTopic(input: {
         category,
         excerpt,
         content,
+        imageUrl: imageUrl ?? null,
+        imageAltText: imageUrl ? imageAltText : null,
         authorName,
         authorEmail: input.authorEmail?.trim() || null,
         published: true,
@@ -353,6 +390,8 @@ export async function createForumTopic(input: {
       tags: normalizedTags,
       excerpt,
       content,
+      imageUrl: imageUrl ?? null,
+      imageAltText: imageUrl ? imageAltText : null,
       authorName,
       authorEmail: input.authorEmail?.trim() || null,
       published: true,
@@ -375,12 +414,16 @@ export async function updateForumTopic(input: {
   authorEmail?: string;
   editorEmail?: string;
   excerpt?: string;
+  imageUrl?: string | null;
+  imageAltText?: string | null;
 }) {
   const slug = input.slug.trim();
   const nextTitle = input.title?.trim() || undefined;
   const nextContent = input.content?.trim() || undefined;
   const nextCategory = input.category?.trim() || undefined;
   const nextExcerpt = input.excerpt?.trim() || undefined;
+  const nextImageUrl = sanitizeImageUrl(input.imageUrl);
+  const nextImageAltText = input.imageAltText?.trim() || undefined;
   const editorEmail = input.editorEmail?.trim().toLowerCase() || undefined;
   const authorName = input.authorName?.trim() || undefined;
 
@@ -412,6 +455,8 @@ export async function updateForumTopic(input: {
         content: nextContent ?? topic.content,
         category: nextCategory ?? topic.category,
         excerpt: nextExcerpt ?? topic.excerpt ?? null,
+        imageUrl: nextImageUrl ?? topic.imageUrl ?? null,
+        imageAltText: nextImageUrl ? (nextImageAltText ?? topic.imageAltText ?? "Attached image") : null,
         authorName: authorName ?? topic.authorName,
         authorEmail: input.authorEmail?.trim() || topic.authorEmail || null,
       },
@@ -439,6 +484,8 @@ export async function updateForumTopic(input: {
       content: nextContent ?? topic.content,
       category: nextCategory ?? topic.category,
       excerpt: nextExcerpt ?? topic.excerpt ?? null,
+      imageUrl: nextImageUrl ?? topic.imageUrl ?? null,
+      imageAltText: nextImageUrl ? (nextImageAltText ?? topic.imageAltText ?? "Attached image") : null,
       authorName: authorName ?? topic.authorName,
       authorEmail: input.authorEmail?.trim() || topic.authorEmail || null,
       updatedAt: new Date().toISOString(),
@@ -515,6 +562,8 @@ export async function updateForumReply(input: {
   authorName?: string;
   authorEmail?: string;
   editorEmail?: string;
+  imageUrl?: string | null;
+  imageAltText?: string | null;
 }) {
   const slug = input.slug.trim();
   const replyId = input.replyId.trim();
@@ -522,6 +571,8 @@ export async function updateForumReply(input: {
   const authorName = input.authorName?.trim();
   const authorEmail = input.authorEmail?.trim().toLowerCase();
   const editorEmail = input.editorEmail?.trim().toLowerCase();
+  const nextImageUrl = sanitizeImageUrl(input.imageUrl);
+  const nextImageAltText = input.imageAltText?.trim() || undefined;
 
   if (!slug || !replyId || (!content && !authorName && !authorEmail)) {
     return null;
@@ -550,6 +601,8 @@ export async function updateForumReply(input: {
       where: { id: replyId },
       data: {
         content: content ?? reply.content,
+        imageUrl: nextImageUrl ?? reply.imageUrl ?? null,
+        imageAltText: nextImageUrl ? (nextImageAltText ?? reply.imageAltText ?? "Attached image") : null,
         authorName: authorName ?? reply.authorName,
         authorEmail: authorEmail || reply.authorEmail || null,
       },
@@ -579,6 +632,8 @@ export async function updateForumReply(input: {
     const updatedReply = {
       ...target,
       content: content ?? target.content,
+      imageUrl: nextImageUrl ?? target.imageUrl ?? null,
+      imageAltText: nextImageUrl ? (nextImageAltText ?? target.imageAltText ?? "Attached image") : null,
       authorName: authorName ?? target.authorName,
       authorEmail: authorEmail || target.authorEmail || null,
       updatedAt: new Date().toISOString(),
@@ -658,10 +713,14 @@ export async function createForumReply(input: {
   authorName: string;
   content: string;
   authorEmail?: string;
+  imageUrl?: string;
+  imageAltText?: string;
 }) {
   const slug = input.slug.trim();
   const authorName = input.authorName.trim();
   const content = input.content.trim();
+  const imageUrl = sanitizeImageUrl(input.imageUrl);
+  const imageAltText = input.imageAltText?.trim() || "Attached image";
 
   if (!slug || !authorName || !content) {
     return null;
@@ -682,6 +741,8 @@ export async function createForumReply(input: {
         authorName,
         authorEmail: input.authorEmail?.trim() || null,
         content,
+        imageUrl: imageUrl ?? null,
+        imageAltText: imageUrl ? imageAltText : null,
       },
     });
 
@@ -699,6 +760,8 @@ export async function createForumReply(input: {
       authorName,
       authorEmail: input.authorEmail?.trim() || null,
       content,
+      imageUrl: imageUrl ?? null,
+      imageAltText: imageUrl ? imageAltText : null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     } satisfies ForumReplyRecord;

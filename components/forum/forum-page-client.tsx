@@ -13,6 +13,8 @@ const defaultForm = {
   category: "General",
   tags: "",
   content: "",
+  imageUrl: "",
+  imageAltText: "",
 };
 
 function getInitials(name: string) {
@@ -39,7 +41,9 @@ export function ForumPageClient({
   const [activeNav, setActiveNav] = useState<"home" | "questions" | "unanswered" | "ai-assist" | "tags" | "users">("questions");
   const [selectedTag, setSelectedTag] = useState("all");
   const [showComposer, setShowComposer] = useState(false);
+  const [isDraggingImage, setIsDraggingImage] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: "idle" | "success" | "error"; message: string }>({
     type: "idle",
@@ -131,6 +135,65 @@ export function ForumPageClient({
       ),
     );
 
+  const readFileAsDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+
+      reject(new Error("The selected image could not be read."));
+    };
+    reader.onerror = () => reject(new Error("The selected image could not be read."));
+    reader.readAsDataURL(file);
+  });
+
+  const handleImageFiles = async (files: FileList | File[]) => {
+    const imageFiles = Array.from(files).filter((file) => file.type.startsWith("image/"));
+
+    if (imageFiles.length === 0) {
+      setStatusMessage({ type: "error", message: "Please choose a valid image file." });
+      return;
+    }
+
+    try {
+      const imageDataUrl = await readFileAsDataUrl(imageFiles[0]);
+      setForm((current) => ({
+        ...current,
+        imageUrl: imageDataUrl,
+        imageAltText: imageFiles[0].name || current.imageAltText || "Attached image",
+      }));
+      setStatusMessage({ type: "success", message: "Image attached to the question." });
+    } catch (error) {
+      setStatusMessage({
+        type: "error",
+        message: error instanceof Error ? error.message : "The selected image could not be attached.",
+      });
+    }
+  };
+
+  const handlePasteImage = async (event: React.ClipboardEvent<HTMLDivElement>) => {
+    const clipboardItems = Array.from(event.clipboardData?.items ?? []);
+    const imageItem = clipboardItems.find((item) => item.type.startsWith("image/"));
+
+    if (!imageItem) {
+      const pastedUrl = event.clipboardData.getData("text").trim();
+      if (/^https?:\/\//i.test(pastedUrl) || pastedUrl.startsWith("data:image/")) {
+        event.preventDefault();
+        setForm((current) => ({ ...current, imageUrl: pastedUrl, imageAltText: current.imageAltText || "Pasted image" }));
+        setStatusMessage({ type: "success", message: "Image URL attached." });
+      }
+      return;
+    }
+
+    event.preventDefault();
+    const file = imageItem.getAsFile();
+    if (file) {
+      await handleImageFiles([file]);
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -158,6 +221,8 @@ export function ForumPageClient({
           tags: normalizedTags,
           authorName: form.authorName || session?.user?.name || "Community member",
           authorEmail: form.authorEmail || session?.user?.email || undefined,
+          imageUrl: form.imageUrl || undefined,
+          imageAltText: form.imageAltText || undefined,
         }),
       });
 
@@ -550,6 +615,73 @@ export function ForumPageClient({
                       <span className="mx-2"> </span>
                       <span className="font-mono text-stone-700 dark:text-stone-200">&gt;quote</span>
                     </div>
+                  </div>
+
+                  <div
+                    onPaste={handlePasteImage}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      setIsDraggingImage(true);
+                    }}
+                    onDragLeave={() => setIsDraggingImage(false)}
+                    onDrop={async (event) => {
+                      event.preventDefault();
+                      setIsDraggingImage(false);
+                      if (event.dataTransfer.files.length > 0) {
+                        await handleImageFiles(event.dataTransfer.files);
+                      }
+                    }}
+                    className={`mt-3 rounded-[18px] border-2 border-dashed p-4 transition ${
+                      isDraggingImage
+                        ? "border-sky-400 bg-sky-50 dark:border-sky-500 dark:bg-sky-950/30"
+                        : "border-stone-300 bg-stone-50 dark:border-stone-700 dark:bg-stone-950/50"
+                    }`}
+                  >
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <div className="text-sm font-semibold text-stone-800 dark:text-stone-100">Add image</div>
+                        <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">Browse, drag &amp; drop, or paste an image or link.</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded-full bg-stone-900 px-3 py-2 text-sm font-medium text-white hover:bg-stone-700 dark:bg-stone-100 dark:text-stone-900">
+                          Browse
+                        </button>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (event) => {
+                            if (event.target.files) {
+                              await handleImageFiles(event.target.files);
+                            }
+                            event.target.value = "";
+                          }}
+                        />
+                        <input
+                          value={form.imageUrl}
+                          onChange={(event) => setForm((current) => ({ ...current, imageUrl: event.target.value }))}
+                          placeholder="Paste image URL"
+                          className="w-full min-w-[220px] rounded-full border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800 outline-none focus:border-stone-500 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 sm:w-64"
+                        />
+                      </div>
+                    </div>
+
+                    {form.imageUrl ? (
+                      <div className="mt-4 overflow-hidden rounded-[16px] border border-stone-200 bg-white dark:border-stone-800">
+                        <img src={form.imageUrl} alt={form.imageAltText || "Attached image"} className="max-h-[260px] w-full object-cover" />
+                        <div className="flex items-center justify-between gap-3 px-3 py-2 text-xs text-stone-600 dark:text-stone-300">
+                          <span>{form.imageAltText || "Attached image"}</span>
+                          <button
+                            type="button"
+                            onClick={() => setForm((current) => ({ ...current, imageUrl: "", imageAltText: "" }))}
+                            className="rounded-full border border-stone-300 px-2 py-1 text-[11px] font-medium text-stone-700 hover:border-stone-500 dark:border-stone-700 dark:text-stone-200"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
 
                   <div>

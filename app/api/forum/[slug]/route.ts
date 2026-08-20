@@ -16,6 +16,15 @@ const topicUpdateSchema = z.object({
   editorEmail: z.string().trim().email("Please provide a valid email address.").optional().or(z.literal("")),
   category: z.string().trim().max(60).optional().or(z.literal("")),
   excerpt: z.string().trim().max(250).optional().or(z.literal("")),
+  imageUrl: z
+    .string()
+    .trim()
+    .refine(
+      (value) => value === "" || /^https?:\/\//i.test(value) || /^data:image\//i.test(value),
+      "Please provide a valid image URL or data URL.",
+    )
+    .optional(),
+  imageAltText: z.string().trim().max(120).optional().or(z.literal("")),
 });
 
 export async function GET(_request: Request, context: { params: Promise<{ slug: string }> | { slug: string } }) {
@@ -87,6 +96,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ slug:
       authorEmail: parsed.data.authorEmail || existing.authorEmail || undefined,
       editorEmail: parsed.data.editorEmail || existing.authorEmail || undefined,
       excerpt: parsed.data.excerpt || existing.excerpt || undefined,
+      imageUrl: parsed.data.imageUrl || existing.imageUrl || undefined,
+      imageAltText: parsed.data.imageAltText || existing.imageAltText || undefined,
     });
 
     if (!topic) {

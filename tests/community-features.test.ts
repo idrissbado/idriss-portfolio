@@ -51,6 +51,16 @@ describe("community features", () => {
     expect(content).toContain("MathRenderer");
   });
 
+  it("supports image attachments in the question composer", () => {
+    const forumClientPath = path.resolve(__dirname, "../components/forum/forum-page-client.tsx");
+    const content = readFileSync(forumClientPath, "utf8");
+
+    expect(content).toContain("Browse");
+    expect(content).toContain("drag");
+    expect(content).toContain("imageUrl");
+    expect(content).toContain("onPaste");
+  });
+
   it("connects forum navigation to real filtering behavior", () => {
     const forumClientPath = path.resolve(__dirname, "../components/forum/forum-page-client.tsx");
     const content = readFileSync(forumClientPath, "utf8");

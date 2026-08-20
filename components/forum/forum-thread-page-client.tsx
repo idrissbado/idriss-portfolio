@@ -25,7 +25,13 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
   const [submitting, setSubmitting] = useState(false);
   const [isEditingQuestion, setIsEditingQuestion] = useState(false);
   const [editingReplyId, setEditingReplyId] = useState<string | null>(null);
-  const [questionDraft, setQuestionDraft] = useState({ title: topic.title, content: topic.content, category: topic.category });
+  const [questionDraft, setQuestionDraft] = useState({
+    title: topic.title,
+    content: topic.content,
+    category: topic.category,
+    imageUrl: topic.imageUrl ?? "",
+    imageAltText: topic.imageAltText ?? "",
+  });
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [statusMessage, setStatusMessage] = useState<{ type: "idle" | "success" | "error"; message: string }>({
     type: "idle",
@@ -71,6 +77,8 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
           title: questionDraft.title,
           content: questionDraft.content,
           category: questionDraft.category,
+          imageUrl: questionDraft.imageUrl || undefined,
+          imageAltText: questionDraft.imageAltText || undefined,
           authorName: session?.user?.name || question.authorName,
           authorEmail: session?.user?.email || question.authorEmail || undefined,
           editorEmail: session?.user?.email || question.authorEmail || undefined,
@@ -85,7 +93,13 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
 
       if (payload.topic) {
         setQuestion(payload.topic);
-        setQuestionDraft({ title: payload.topic.title, content: payload.topic.content, category: payload.topic.category });
+        setQuestionDraft({
+          title: payload.topic.title,
+          content: payload.topic.content,
+          category: payload.topic.category,
+          imageUrl: payload.topic.imageUrl ?? "",
+          imageAltText: payload.topic.imageAltText ?? "",
+        });
       }
 
       setIsEditingQuestion(false);
@@ -340,11 +354,31 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
                     className="min-h-[220px] w-full rounded-[22px] border border-stone-300 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-stone-500 dark:border-stone-700 dark:bg-stone-950"
                     required
                   />
+                  <div className="rounded-[18px] border border-stone-300 bg-stone-50 p-3 dark:border-stone-700 dark:bg-stone-950">
+                    <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-stone-500 dark:text-stone-400">Image URL</label>
+                    <input
+                      value={questionDraft.imageUrl}
+                      onChange={(event) => setQuestionDraft((current) => ({ ...current, imageUrl: event.target.value }))}
+                      placeholder="https://example.com/image.png"
+                      className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-stone-500 dark:border-stone-700 dark:bg-stone-900"
+                    />
+                    {questionDraft.imageUrl ? (
+                      <div className="mt-3 overflow-hidden rounded-[14px] border border-stone-200 bg-white dark:border-stone-800">
+                        <img src={questionDraft.imageUrl} alt={questionDraft.imageAltText || "Question image preview"} className="max-h-[220px] w-full object-cover" />
+                      </div>
+                    ) : null}
+                  </div>
                   <div className="flex flex-wrap gap-3">
                     <button type="submit" disabled={submitting} className="rounded-full bg-stone-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-stone-100 dark:text-stone-900">
                       {submitting ? "Saving..." : "Save changes"}
                     </button>
-                    <button type="button" onClick={() => { setIsEditingQuestion(false); setQuestionDraft({ title: question.title, content: question.content, category: question.category }); }} className="rounded-full border border-stone-300 px-4 py-2.5 text-sm font-medium text-stone-700 hover:border-stone-500 dark:border-stone-700 dark:text-stone-200">
+                    <button type="button" onClick={() => { setIsEditingQuestion(false); setQuestionDraft({
+                      title: question.title,
+                      content: question.content,
+                      category: question.category,
+                      imageUrl: question.imageUrl ?? "",
+                      imageAltText: question.imageAltText ?? "",
+                    }); }} className="rounded-full border border-stone-300 px-4 py-2.5 text-sm font-medium text-stone-700 hover:border-stone-500 dark:border-stone-700 dark:text-stone-200">
                       Cancel
                     </button>
                   </div>
@@ -400,6 +434,11 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
             </div>
 
             <div className="rounded-[28px] border border-stone-200 bg-gradient-to-br from-stone-50 to-white p-5 text-stone-700 shadow-inner dark:border-stone-800 dark:from-stone-950/80 dark:to-stone-900/70 dark:text-stone-300">
+              {question.imageUrl ? (
+                <div className="mb-5 overflow-hidden rounded-[20px] border border-stone-200 bg-white dark:border-stone-800">
+                  <img src={question.imageUrl} alt={question.imageAltText || "Attached forum image"} className="max-h-[420px] w-full object-cover" />
+                </div>
+              ) : null}
               <MathRenderer content={question.content} />
             </div>
           </div>
@@ -467,6 +506,11 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
                         </div>
                       ) : (
                         <div className="mt-4 rounded-[22px] border border-stone-200 bg-white p-4 text-stone-700 shadow-inner dark:border-stone-800 dark:bg-stone-900 dark:text-stone-300">
+                          {reply.imageUrl ? (
+                            <div className="mb-4 overflow-hidden rounded-[18px] border border-stone-200 bg-stone-50 dark:border-stone-800 dark:bg-stone-950">
+                              <img src={reply.imageUrl} alt={reply.imageAltText || "Attached forum image"} className="max-h-[320px] w-full object-cover" />
+                            </div>
+                          ) : null}
                           <MathRenderer content={reply.content} />
                         </div>
                       )}
