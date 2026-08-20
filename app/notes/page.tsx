@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { researchNotes } from "@/lib/academic-data";
+import { getResearchNotes } from "@/lib/content-store";
 
-export default function ResearchNotesPage() {
+export default async function ResearchNotesPage() {
+  const researchNotes = await getResearchNotes();
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
       <header className="mb-10">

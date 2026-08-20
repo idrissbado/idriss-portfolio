@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { researchNotes } from "@/lib/academic-data";
 import { MathRenderer } from "@/components/math/math-renderer";
+import { getResearchNotes } from "@/lib/content-store";
 
 export default async function ResearchNoteDetailPage({
   params,
@@ -8,6 +8,7 @@ export default async function ResearchNoteDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const researchNotes = await getResearchNotes();
   const note = researchNotes.find((item) => item.slug === slug);
 
   if (!note) {
