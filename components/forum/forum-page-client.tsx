@@ -29,6 +29,7 @@ export function ForumPageClient({ initialTopics }: { initialTopics: ForumTopic[]
   const [form, setForm] = useState(defaultForm);
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("interesting");
+  const [selectedTag, setSelectedTag] = useState("all");
   const [submitting, setSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: "idle" | "success" | "error"; message: string }>({
     type: "idle",
@@ -50,7 +51,7 @@ export function ForumPageClient({ initialTopics }: { initialTopics: ForumTopic[]
   const isAuthenticated = status === "authenticated";
   const navItems = ["Home", "Questions", "Unanswered", "AI Assist", "Tags", "Users"];
   const tabOptions = ["interesting", "bountied", "hot", "week", "month"] as const;
-  const tagChips = ["real-analysis", "calculus", "linear-algebra", "probability", "geometry", "optimization"];
+  const tagChips = ["all", "real-analysis", "calculus", "linear-algebra", "probability", "geometry", "optimization"];
   const hotQuestions = [
     "Does anyone know what ML looks like after it has been trained?",
     "How do I formalize a rigorous argument in topology?",
@@ -59,15 +60,22 @@ export function ForumPageClient({ initialTopics }: { initialTopics: ForumTopic[]
     "What makes a research question genuinely deep rather than merely difficult?",
   ];
   const featuredMembers = [
-    { name: "Idriss Bado", role: "Mathematician", rep: 126 },
-    { name: "Noah Martin", role: "Applied analyst", rep: 98 },
-    { name: "Alicia Bell", role: "Statistics researcher", rep: 81 },
+    { name: "Idriss Bado", role: "Mathematician", rep: 126, badge: "Research lead" },
+    { name: "Noah Martin", role: "Applied analyst", rep: 98, badge: "Proofs" },
+    { name: "Alicia Bell", role: "Statistics researcher", rep: 81, badge: "Data science" },
+  ];
+  const forumStats = [
+    { label: "Members", value: "3.2k" },
+    { label: "Questions", value: String(Math.max(topics.length, 1)) },
+    { label: "Answers", value: String(topics.reduce((total, topic) => total + topic.replies.length, 0)) },
   ];
 
   const filteredTopics = [...topics]
     .filter((topic) => {
       const haystack = `${topic.title} ${topic.content} ${topic.category} ${topic.authorName}`.toLowerCase();
-      return haystack.includes(search.toLowerCase());
+      const searchMatches = haystack.includes(search.toLowerCase());
+      const tagMatches = selectedTag === "all" || [topic.category, topic.title, topic.content].some((value) => value.toLowerCase().includes(selectedTag.toLowerCase()));
+      return searchMatches && tagMatches;
     })
     .sort((a, b) => {
       const scoreA = a.replies.length + (a.title.length > 40 ? 4 : 0);
@@ -197,6 +205,22 @@ export function ForumPageClient({ initialTopics }: { initialTopics: ForumTopic[]
               <p className="mt-3 text-sm leading-6 text-stone-600 dark:text-stone-300">
                 A premium research and teaching forum for deep mathematical discussion, rigorous proofs, and collaborative learning.
               </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {tagChips.filter((tag) => tag !== "all").slice(0, 4).map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => setSelectedTag(tag)}
+                    className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] transition ${
+                      selectedTag === tag
+                        ? "border-stone-900 bg-stone-900 text-white dark:border-stone-100 dark:bg-stone-100 dark:text-stone-900"
+                        : "border-stone-300 bg-white text-stone-600 hover:border-stone-500 hover:text-stone-900 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300"
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
               {!isAuthenticated ? (
                 <div className="mt-4 flex flex-col gap-2">
                   <Link href="/register" className="rounded-full bg-stone-900 px-3 py-2 text-center text-sm font-medium text-white hover:bg-stone-700 dark:bg-stone-100 dark:text-stone-900">
@@ -235,9 +259,27 @@ export function ForumPageClient({ initialTopics }: { initialTopics: ForumTopic[]
 
               <div className="mt-4 flex flex-wrap gap-2">
                 {tagChips.map((tag) => (
-                  <span key={tag} className="rounded-full border border-stone-200 bg-stone-50 px-2.5 py-1 text-[11px] font-medium text-stone-700 dark:border-stone-700 dark:bg-stone-950/60 dark:text-stone-200">
-                    {tag}
-                  </span>
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => setSelectedTag(tag)}
+                    className={`rounded-full border px-2.5 py-1 text-[11px] font-medium capitalize transition ${
+                      selectedTag === tag
+                        ? "border-stone-900 bg-stone-900 text-white dark:border-stone-100 dark:bg-stone-100 dark:text-stone-900"
+                        : "border-stone-200 bg-stone-50 text-stone-700 hover:border-stone-300 hover:text-stone-950 dark:border-stone-700 dark:bg-stone-950/60 dark:text-stone-200 dark:hover:border-stone-500"
+                    }`}
+                  >
+                    {tag === "all" ? "all topics" : tag}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                {forumStats.map((stat) => (
+                  <div key={stat.label} className="rounded-2xl border border-stone-200 bg-stone-50/80 p-3 text-center dark:border-stone-800 dark:bg-stone-950/60">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">{stat.label}</div>
+                    <div className="mt-2 text-xl font-semibold text-stone-900 dark:text-stone-50">{stat.value}</div>
+                  </div>
                 ))}
               </div>
             </section>
@@ -364,18 +406,23 @@ export function ForumPageClient({ initialTopics }: { initialTopics: ForumTopic[]
                 <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">Featured members</div>
                 <div className="mt-4 space-y-3">
                   {featuredMembers.map((member) => (
-                    <div key={member.name} className="flex items-center justify-between rounded-2xl border border-stone-200 bg-stone-50 p-3 dark:border-stone-800 dark:bg-stone-950/60">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-stone-800 to-stone-500 text-[10px] font-semibold uppercase text-white dark:from-stone-200 dark:to-stone-500 dark:text-stone-950">
-                          {getInitials(member.name)}
+                    <div key={member.name} className="rounded-2xl border border-stone-200 bg-stone-50 p-3 dark:border-stone-800 dark:bg-stone-950/60">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-stone-800 to-stone-500 text-[10px] font-semibold uppercase text-white dark:from-stone-200 dark:to-stone-500 dark:text-stone-950">
+                            {getInitials(member.name)}
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-stone-900 dark:text-stone-50">{member.name}</div>
+                            <div className="text-[11px] text-stone-500 dark:text-stone-400">{member.role}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="text-sm font-medium text-stone-900 dark:text-stone-50">{member.name}</div>
-                          <div className="text-[11px] text-stone-500 dark:text-stone-400">{member.role}</div>
+                        <div className="rounded-full bg-stone-200 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-700 dark:bg-stone-800 dark:text-stone-200">
+                          {member.rep}
                         </div>
                       </div>
-                      <div className="rounded-full bg-stone-200 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-700 dark:bg-stone-800 dark:text-stone-200">
-                        {member.rep}
+                      <div className="mt-3 inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-300">
+                        {member.badge}
                       </div>
                     </div>
                   ))}

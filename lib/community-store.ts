@@ -128,7 +128,8 @@ export async function getSubscribers() {
     });
 
     return subscribers.map(normalizeSubscriber);
-  } catch {
+  } catch (error) {
+    console.error("Subscriber DB query failed:", error);
     return fallbackSubscribers;
   }
 }
@@ -167,7 +168,8 @@ export async function createSubscriber(input: {
     });
 
     return normalizeSubscriber(subscriber);
-  } catch {
+  } catch (error) {
+    console.error("Subscriber upsert failed:", error);
     const existing = fallbackSubscribers.find((item) => item.email === email);
     if (existing) {
       return { ...existing, name, source, interest, status: "active", updatedAt: new Date().toISOString() };
@@ -202,7 +204,8 @@ export async function getForumTopics() {
     });
 
     return topics.map(normalizeTopic);
-  } catch {
+  } catch (error) {
+    console.error("Forum topics query failed:", error);
     return fallbackTopics;
   }
 }
@@ -223,7 +226,8 @@ export async function getForumTopicBySlug(slug: string) {
     }
 
     return normalizeTopic(topic);
-  } catch {
+  } catch (error) {
+    console.error("Forum topic lookup failed:", error);
     return fallbackTopics.find((item) => item.slug === slug) ?? null;
   }
 }
@@ -264,7 +268,8 @@ export async function createForumTopic(input: {
     });
 
     return normalizeTopic(created);
-  } catch {
+  } catch (error) {
+    console.error("Forum topic creation failed:", error);
     const created = {
       id: `fallback-topic-${Date.now()}`,
       slug,
@@ -318,7 +323,8 @@ export async function createForumReply(input: {
     });
 
     return normalizeReply(reply);
-  } catch {
+  } catch (error) {
+    console.error("Forum reply creation failed:", error);
     const topic = fallbackTopics.find((item) => item.slug === slug);
     if (!topic) {
       return null;
