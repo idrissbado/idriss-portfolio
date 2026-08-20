@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { MathRenderer } from "@/components/math/math-renderer";
-import type { ForumTopic } from "@/lib/community-store";
+import type { CommunityStats, ForumTopic } from "@/lib/community-store";
 
 const defaultForm = {
   title: "",
@@ -23,7 +23,13 @@ function getInitials(name: string) {
     .join("") || "M";
 }
 
-export function ForumPageClient({ initialTopics }: { initialTopics: ForumTopic[] }) {
+export function ForumPageClient({
+  initialTopics,
+  initialStats,
+}: {
+  initialTopics: ForumTopic[];
+  initialStats?: CommunityStats;
+}) {
   const { data: session, status } = useSession();
   const [topics, setTopics] = useState(initialTopics);
   const [form, setForm] = useState(defaultForm);
@@ -52,22 +58,15 @@ export function ForumPageClient({ initialTopics }: { initialTopics: ForumTopic[]
   const navItems = ["Home", "Questions", "Unanswered", "AI Assist", "Tags", "Users"];
   const tabOptions = ["interesting", "bountied", "hot", "week", "month"] as const;
   const tagChips = ["all", "real-analysis", "calculus", "linear-algebra", "probability", "geometry", "optimization"];
-  const hotQuestions = [
-    "Does anyone know what ML looks like after it has been trained?",
-    "How do I formalize a rigorous argument in topology?",
-    "What are the strongest conditions for uniqueness in compactness arguments?",
-    "How should one compare statistical inference and proof-based reasoning?",
-    "What makes a research question genuinely deep rather than merely difficult?",
-  ];
-  const featuredMembers = [
-    { name: "Idriss Bado", role: "Mathematician", rep: 126, badge: "Research lead" },
-    { name: "Noah Martin", role: "Applied analyst", rep: 98, badge: "Proofs" },
-    { name: "Alicia Bell", role: "Statistics researcher", rep: 81, badge: "Data science" },
-  ];
+  const hotQuestions = topics.slice(0, 5).map((topic) => topic.title);
+  const featuredMembers = initialStats?.featuredMembers ?? [];
+  const questionCount = Math.max(initialStats?.questionCount ?? topics.length, 0);
+  const answerCount = Math.max(initialStats?.answerCount ?? topics.reduce((total, topic) => total + topic.replies.length, 0), 0);
+  const memberCount = Math.max(initialStats?.memberCount ?? 0, 0);
   const forumStats = [
-    { label: "Members", value: "3.2k" },
-    { label: "Questions", value: String(Math.max(topics.length, 1)) },
-    { label: "Answers", value: String(topics.reduce((total, topic) => total + topic.replies.length, 0)) },
+    { label: "Members", value: memberCount > 0 ? String(memberCount) : "Community" },
+    { label: "Questions", value: String(questionCount) },
+    { label: "Answers", value: String(answerCount) },
   ];
 
   const filteredTopics = [...topics]
@@ -391,41 +390,53 @@ export function ForumPageClient({ initialTopics }: { initialTopics: ForumTopic[]
           <aside className="hidden xl:block">
             <div className="space-y-5">
               <div className="forum-panel-glow rounded-[28px] border border-stone-200 bg-white/80 p-5 shadow-[0_18px_35px_rgba(15,23,42,0.04)] dark:border-stone-800 dark:bg-stone-900/80">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">Hot network questions</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">Community highlights</div>
                 <div className="mt-4 space-y-3">
-                  {hotQuestions.map((question) => (
-                    <div key={question} className="flex gap-3 rounded-2xl border border-stone-200 bg-stone-50 p-3 text-sm text-stone-700 dark:border-stone-800 dark:bg-stone-950/60 dark:text-stone-200">
-                      <span className="mt-1 text-base text-stone-400">◉</span>
-                      <p className="leading-6">{question}</p>
+                  {hotQuestions.length > 0 ? (
+                    hotQuestions.map((question) => (
+                      <div key={question} className="flex gap-3 rounded-2xl border border-stone-200 bg-stone-50 p-3 text-sm text-stone-700 dark:border-stone-800 dark:bg-stone-950/60 dark:text-stone-200">
+                        <span className="mt-1 text-base text-stone-400">◉</span>
+                        <p className="leading-6">{question}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-stone-300 bg-stone-50 p-4 text-sm leading-6 text-stone-600 dark:border-stone-700 dark:bg-stone-950/60 dark:text-stone-300">
+                      No highlighted discussions yet. The first published topic will appear here.
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
 
               <div className="forum-panel-glow rounded-[28px] border border-stone-200 bg-white/80 p-5 shadow-[0_18px_35px_rgba(15,23,42,0.04)] dark:border-stone-800 dark:bg-stone-900/80">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">Featured members</div>
                 <div className="mt-4 space-y-3">
-                  {featuredMembers.map((member) => (
-                    <div key={member.name} className="rounded-2xl border border-stone-200 bg-stone-50 p-3 dark:border-stone-800 dark:bg-stone-950/60">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-stone-800 to-stone-500 text-[10px] font-semibold uppercase text-white dark:from-stone-200 dark:to-stone-500 dark:text-stone-950">
-                            {getInitials(member.name)}
+                  {featuredMembers.length > 0 ? (
+                    featuredMembers.map((member) => (
+                      <div key={member.name} className="rounded-2xl border border-stone-200 bg-stone-50 p-3 dark:border-stone-800 dark:bg-stone-950/60">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-stone-800 to-stone-500 text-[10px] font-semibold uppercase text-white dark:from-stone-200 dark:to-stone-500 dark:text-stone-950">
+                              {getInitials(member.name)}
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-stone-900 dark:text-stone-50">{member.name}</div>
+                              <div className="text-[11px] text-stone-500 dark:text-stone-400">{member.role}</div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="text-sm font-medium text-stone-900 dark:text-stone-50">{member.name}</div>
-                            <div className="text-[11px] text-stone-500 dark:text-stone-400">{member.role}</div>
+                          <div className="rounded-full bg-stone-200 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-700 dark:bg-stone-800 dark:text-stone-200">
+                            {member.rep}
                           </div>
                         </div>
-                        <div className="rounded-full bg-stone-200 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-700 dark:bg-stone-800 dark:text-stone-200">
-                          {member.rep}
+                        <div className="mt-3 inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-300">
+                          {member.badge}
                         </div>
                       </div>
-                      <div className="mt-3 inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-300">
-                        {member.badge}
-                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-stone-300 bg-stone-50 p-4 text-sm leading-6 text-stone-600 dark:border-stone-700 dark:bg-stone-950/60 dark:text-stone-300">
+                      Featured member profiles will appear here once real member identities are assigned.
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </div>
