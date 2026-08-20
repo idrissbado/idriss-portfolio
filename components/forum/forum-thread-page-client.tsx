@@ -86,9 +86,9 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
         </Link>
       </div>
 
-      <article className="rounded-[32px] border border-stone-200 bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.04)] dark:border-stone-800 dark:bg-stone-900 sm:p-8">
+      <article className="forum-panel-glow rounded-[32px] border border-stone-200 bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.04)] dark:border-stone-800 dark:bg-stone-900 sm:p-8">
         <div className="flex items-center justify-between gap-4">
-          <span className="rounded-full border border-stone-200 bg-stone-100 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-stone-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200">
+          <span className="forum-badge rounded-full border border-stone-200 bg-stone-100 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-stone-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200">
             {topic.category}
           </span>
           <span className="text-xs text-stone-500 dark:text-stone-400">
@@ -103,7 +103,7 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
           </div>
           <div className="text-sm text-stone-600 dark:text-stone-300">Started by {topic.authorName}</div>
         </div>
-        <div className="mt-6 rounded-2xl border border-stone-200 bg-stone-50/70 p-4 text-stone-700 dark:border-stone-800 dark:bg-stone-950/60 dark:text-stone-300">
+        <div className="mt-6 rounded-2xl border border-stone-200 bg-gradient-to-br from-stone-50 to-white p-4 text-stone-700 shadow-inner dark:border-stone-800 dark:from-stone-950/80 dark:to-stone-900/70 dark:text-stone-300">
           <MathRenderer content={topic.content} />
         </div>
       </article>
@@ -130,7 +130,7 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
                     {new Date(reply.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                   </div>
                 </div>
-                <div className="mt-3 rounded-xl border border-stone-200 bg-white/60 p-3 text-stone-700 dark:border-stone-800 dark:bg-stone-900/60 dark:text-stone-300">
+                <div className="mt-3 rounded-xl border border-stone-200 bg-gradient-to-br from-white to-stone-50 p-3 text-stone-700 shadow-inner dark:border-stone-800 dark:from-stone-900/60 dark:to-stone-950/80 dark:text-stone-300">
                   <MathRenderer content={reply.content} />
                 </div>
               </div>

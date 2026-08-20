@@ -96,7 +96,7 @@ export function ForumPageClient({ initialTopics }: { initialTopics: ForumTopic[]
 
   return (
     <div className="forum-shell mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-      <header className="premium-surface mb-10 rounded-[32px] border border-stone-200/80 bg-white/75 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.06)] backdrop-blur-sm dark:border-stone-800 dark:bg-stone-900/75 sm:p-8">
+      <header className="premium-surface forum-panel-glow mb-10 rounded-[32px] border border-stone-200/80 bg-white/75 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.06)] backdrop-blur-sm dark:border-stone-800 dark:bg-stone-900/75 sm:p-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-stone-500">Member forum</p>
@@ -111,6 +111,23 @@ export function ForumPageClient({ initialTopics }: { initialTopics: ForumTopic[]
         <p className="mt-5 max-w-3xl text-base leading-7 text-stone-600 dark:text-stone-300">
           A premium community for mathematics, modeling, statistics, AI, and research discussion—designed for serious ideas and clearer reasoning.
         </p>
+
+        <div className="mt-8 flex flex-wrap gap-2">
+          {[
+            "Verified membership",
+            "Research-first",
+            "LaTeX-ready",
+            "Moderated discussion",
+            "Member-only access",
+          ].map((tag) => (
+            <span
+              key={tag}
+              className="forum-badge rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-stone-700 dark:border-stone-700 dark:bg-stone-950/60 dark:text-stone-200"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
 
         <div className="mt-8 grid gap-3 sm:grid-cols-3">
           {[
@@ -240,9 +257,9 @@ export function ForumPageClient({ initialTopics }: { initialTopics: ForumTopic[]
             </div>
           ) : (
             topics.map((topic) => (
-              <article key={topic.id} className="rounded-[28px] border border-stone-200 bg-white p-5 shadow-[0_20px_45px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:border-stone-300 dark:border-stone-800 dark:bg-stone-900">
+              <article key={topic.id} className="forum-panel-glow rounded-[28px] border border-stone-200 bg-white p-5 shadow-[0_20px_45px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:border-stone-300 dark:border-stone-800 dark:bg-stone-900">
                 <div className="flex items-center justify-between gap-4">
-                  <span className="rounded-full border border-stone-200 bg-stone-100 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-stone-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200">
+                  <span className="forum-badge rounded-full border border-stone-200 bg-stone-100 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-stone-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200">
                     {topic.category}
                   </span>
                   <span className="text-xs text-stone-500 dark:text-stone-400">
