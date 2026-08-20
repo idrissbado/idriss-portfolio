@@ -366,6 +366,93 @@ export async function createForumTopic(input: {
   }
 }
 
+export async function updateForumTopic(input: {
+  slug: string;
+  title?: string;
+  content?: string;
+  category?: string;
+  authorName?: string;
+  authorEmail?: string;
+  editorEmail?: string;
+  excerpt?: string;
+}) {
+  const slug = input.slug.trim();
+  const nextTitle = input.title?.trim() || undefined;
+  const nextContent = input.content?.trim() || undefined;
+  const nextCategory = input.category?.trim() || undefined;
+  const nextExcerpt = input.excerpt?.trim() || undefined;
+  const editorEmail = input.editorEmail?.trim().toLowerCase() || undefined;
+  const authorName = input.authorName?.trim() || undefined;
+
+  if (!slug || (!nextTitle && !nextContent && !nextCategory && !nextExcerpt && !authorName && !authorEmail)) {
+    return null;
+  }
+
+  try {
+    const topic = await prisma.forumTopic.findUnique({
+      where: { slug },
+      include: { replies: { orderBy: { createdAt: "asc" } } },
+    });
+
+    if (!topic) {
+      return null;
+    }
+
+    const isAllowedByEmail = !!editorEmail && !!topic.authorEmail && editorEmail === topic.authorEmail.trim().toLowerCase();
+    const isAllowedByName = !!authorName && topic.authorName.trim().toLowerCase() === authorName.trim().toLowerCase();
+
+    if (!isAllowedByEmail && !isAllowedByName) {
+      return null;
+    }
+
+    const updated = await prisma.forumTopic.update({
+      where: { id: topic.id },
+      data: {
+        title: nextTitle ?? topic.title,
+        content: nextContent ?? topic.content,
+        category: nextCategory ?? topic.category,
+        excerpt: nextExcerpt ?? topic.excerpt ?? null,
+        authorName: authorName ?? topic.authorName,
+        authorEmail: input.authorEmail?.trim() || topic.authorEmail || null,
+      },
+      include: { replies: { orderBy: { createdAt: "asc" } } },
+    });
+
+    return normalizeTopic(updated);
+  } catch (error) {
+    console.error("Forum topic update failed:", error);
+    const topic = fallbackTopics.find((item) => item.slug === slug);
+    if (!topic) {
+      return null;
+    }
+
+    const isAllowedByEmail = !!editorEmail && !!topic.authorEmail && editorEmail === topic.authorEmail.trim().toLowerCase();
+    const isAllowedByName = !!authorName && topic.authorName.trim().toLowerCase() === authorName.trim().toLowerCase();
+
+    if (!isAllowedByEmail && !isAllowedByName) {
+      return null;
+    }
+
+    const updatedTopic = {
+      ...topic,
+      title: nextTitle ?? topic.title,
+      content: nextContent ?? topic.content,
+      category: nextCategory ?? topic.category,
+      excerpt: nextExcerpt ?? topic.excerpt ?? null,
+      authorName: authorName ?? topic.authorName,
+      authorEmail: input.authorEmail?.trim() || topic.authorEmail || null,
+      updatedAt: new Date().toISOString(),
+    } satisfies ForumTopic;
+
+    const index = fallbackTopics.findIndex((item) => item.slug === slug);
+    if (index >= 0) {
+      fallbackTopics[index] = updatedTopic;
+    }
+
+    return updatedTopic;
+  }
+}
+
 export async function createForumReply(input: {
   slug: string;
   authorName: string;

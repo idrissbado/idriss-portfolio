@@ -69,6 +69,16 @@ describe("community features", () => {
     expect(content).not.toContain("Reading list for math and data science");
   });
 
+  it("allows an author to edit an existing question", () => {
+    const routePath = path.resolve(__dirname, "../app/api/forum/[slug]/route.ts");
+    expect(existsSync(routePath)).toBe(true);
+
+    const content = readFileSync(routePath, "utf8");
+    expect(content).toContain("PATCH");
+    expect(content).toContain("updateForumTopic");
+    expect(content).toContain("editorEmail");
+  });
+
   it("exposes the subscriber API endpoint", () => {
     const routePath = path.resolve(__dirname, "../app/api/subscribers/route.ts");
 

@@ -17,11 +17,14 @@ function getInitials(name: string) {
 
 export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
   const { data: session, status } = useSession();
+  const [question, setQuestion] = useState<ForumTopic>(topic);
   const [replies, setReplies] = useState<ForumReplyRecord[]>(topic.replies);
   const [draft, setDraft] = useState("");
   const [authorName, setAuthorName] = useState("");
   const [authorEmail, setAuthorEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [isEditingQuestion, setIsEditingQuestion] = useState(false);
+  const [questionDraft, setQuestionDraft] = useState({ title: topic.title, content: topic.content, category: topic.category });
   const [statusMessage, setStatusMessage] = useState<{ type: "idle" | "success" | "error"; message: string }>({
     type: "idle",
     message: "",
@@ -37,7 +40,59 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
   }, [session]);
 
   const isAuthenticated = status === "authenticated";
+  const canEditQuestion = isAuthenticated && (
+    (session?.user?.email && question.authorEmail && session.user.email.toLowerCase() === question.authorEmail.toLowerCase()) ||
+    (session?.user?.name && question.authorName && session.user.name.trim().toLowerCase() === question.authorName.trim().toLowerCase())
+  );
   const votes = Math.max(replies.length + 1, 1);
+
+  const handleQuestionUpdate = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!canEditQuestion) {
+      setStatusMessage({ type: "error", message: "You can only edit your own question." });
+      return;
+    }
+
+    setSubmitting(true);
+    setStatusMessage({ type: "idle", message: "" });
+
+    try {
+      const response = await fetch(`/api/forum/${question.slug}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: questionDraft.title,
+          content: questionDraft.content,
+          category: questionDraft.category,
+          authorName: session?.user?.name || question.authorName,
+          authorEmail: session?.user?.email || question.authorEmail || undefined,
+          editorEmail: session?.user?.email || question.authorEmail || undefined,
+        }),
+      });
+
+      const payload = (await response.json()) as { topic?: ForumTopic; error?: string };
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Unable to update the question.");
+      }
+
+      if (payload.topic) {
+        setQuestion(payload.topic);
+        setQuestionDraft({ title: payload.topic.title, content: payload.topic.content, category: payload.topic.category });
+      }
+
+      setIsEditingQuestion(false);
+      setStatusMessage({ type: "success", message: "Your question was updated." });
+    } catch (error) {
+      setStatusMessage({
+        type: "error",
+        message: error instanceof Error ? error.message : "Unable to update the question.",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -105,26 +160,64 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-3">
                 <span className="forum-badge rounded-full border border-stone-200 bg-stone-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-stone-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200">
-                  {topic.category}
+                  {question.category}
                 </span>
                 <span className="text-xs text-stone-500 dark:text-stone-400">
-                  {new Date(topic.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  {new Date(question.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                 </span>
               </div>
 
-              <h1 className="mt-4 text-3xl font-semibold tracking-tight text-stone-950 dark:text-stone-50 sm:text-4xl">
-                {topic.title}
-              </h1>
+              {isEditingQuestion ? (
+                <form onSubmit={handleQuestionUpdate} className="mt-4 space-y-4">
+                  <input
+                    value={questionDraft.title}
+                    onChange={(event) => setQuestionDraft((current) => ({ ...current, title: event.target.value }))}
+                    className="w-full rounded-2xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-xl font-semibold outline-none focus:border-stone-500 dark:border-stone-700 dark:bg-stone-950"
+                    required
+                  />
+                  <input
+                    value={questionDraft.category}
+                    onChange={(event) => setQuestionDraft((current) => ({ ...current, category: event.target.value }))}
+                    className="w-full rounded-2xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-stone-500 dark:border-stone-700 dark:bg-stone-950"
+                    placeholder="Category"
+                  />
+                  <textarea
+                    value={questionDraft.content}
+                    onChange={(event) => setQuestionDraft((current) => ({ ...current, content: event.target.value }))}
+                    className="min-h-[220px] w-full rounded-[22px] border border-stone-300 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-stone-500 dark:border-stone-700 dark:bg-stone-950"
+                    required
+                  />
+                  <div className="flex flex-wrap gap-3">
+                    <button type="submit" disabled={submitting} className="rounded-full bg-stone-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-stone-100 dark:text-stone-900">
+                      {submitting ? "Saving..." : "Save changes"}
+                    </button>
+                    <button type="button" onClick={() => { setIsEditingQuestion(false); setQuestionDraft({ title: question.title, content: question.content, category: question.category }); }} className="rounded-full border border-stone-300 px-4 py-2.5 text-sm font-medium text-stone-700 hover:border-stone-500 dark:border-stone-700 dark:text-stone-200">
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <h1 className="mt-4 text-3xl font-semibold tracking-tight text-stone-950 dark:text-stone-50 sm:text-4xl">
+                    {question.title}
+                  </h1>
 
-              <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-stone-600 dark:text-stone-300">
-                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-stone-800 to-stone-500 text-[11px] font-semibold uppercase text-white dark:from-stone-100 dark:to-stone-500 dark:text-stone-950">
-                  {getInitials(topic.authorName || "Member")}
-                </div>
-                <div>
-                  <div className="font-medium text-stone-900 dark:text-stone-50">{topic.authorName}</div>
-                  <div className="text-xs text-stone-500 dark:text-stone-400">Member · Research discussion</div>
-                </div>
-              </div>
+                  <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-stone-600 dark:text-stone-300">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-stone-800 to-stone-500 text-[11px] font-semibold uppercase text-white dark:from-stone-100 dark:to-stone-500 dark:text-stone-950">
+                      {getInitials(question.authorName || "Member")}
+                    </div>
+                    <div>
+                      <div className="font-medium text-stone-900 dark:text-stone-50">{question.authorName}</div>
+                      <div className="text-xs text-stone-500 dark:text-stone-400">Member · Research discussion</div>
+                    </div>
+                    {canEditQuestion ? (
+                      <button type="button" onClick={() => setIsEditingQuestion(true)} className="ml-auto rounded-full border border-stone-300 px-3 py-1.5 text-xs font-medium text-stone-700 hover:border-stone-500 dark:border-stone-700 dark:text-stone-200">
+                        Edit question
+                      </button>
+                    ) : null}
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="grid grid-cols-3 gap-3 sm:min-w-[260px]">
@@ -149,7 +242,7 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
             </div>
 
             <div className="rounded-[28px] border border-stone-200 bg-gradient-to-br from-stone-50 to-white p-5 text-stone-700 shadow-inner dark:border-stone-800 dark:from-stone-950/80 dark:to-stone-900/70 dark:text-stone-300">
-              <MathRenderer content={topic.content} />
+              <MathRenderer content={question.content} />
             </div>
           </div>
         </article>
