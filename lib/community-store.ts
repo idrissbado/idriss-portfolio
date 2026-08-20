@@ -425,6 +425,7 @@ export async function updateForumTopic(input: {
   const nextImageUrl = sanitizeImageUrl(input.imageUrl);
   const nextImageAltText = input.imageAltText?.trim() || undefined;
   const editorEmail = input.editorEmail?.trim().toLowerCase() || undefined;
+  const authorEmail = input.authorEmail?.trim().toLowerCase() || undefined;
   const authorName = input.authorName?.trim() || undefined;
 
   if (!slug || (!nextTitle && !nextContent && !nextCategory && !nextExcerpt && !authorName && !authorEmail)) {
