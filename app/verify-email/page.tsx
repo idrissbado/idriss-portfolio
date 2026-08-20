@@ -17,6 +17,8 @@ export default async function VerifyEmailPage({
     redirect("/login?error=Missing+verification+token");
   }
 
+  let redirectTo = "/login?verified=1";
+
   try {
     const tokenHash = hashVerificationToken(token);
     const user = await prisma.user.findFirst({
@@ -27,21 +29,21 @@ export default async function VerifyEmailPage({
     });
 
     if (!user) {
-      redirect("/login?error=This+verification+link+is+invalid+or+expired");
+      redirectTo = "/login?error=This+verification+link+is+invalid+or+expired";
+    } else {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          emailVerified: new Date(),
+          verificationTokenHash: null,
+          verificationExpiresAt: null,
+        },
+      });
     }
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        emailVerified: new Date(),
-        verificationTokenHash: null,
-        verificationExpiresAt: null,
-      },
-    });
-
-    redirect("/login?verified=1");
   } catch (error) {
     console.error("Verification failed:", error);
-    redirect("/login?error=We+couldn%27t+verify+your+email+right+now");
+    redirectTo = "/login?error=We+couldn%27t+verify+your+email+right+now";
   }
+
+  redirect(redirectTo);
 }
