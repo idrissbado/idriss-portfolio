@@ -79,6 +79,16 @@ describe("community features", () => {
     expect(content).toContain("editorEmail");
   });
 
+  it("allows an author to delete an existing question", () => {
+    const routePath = path.resolve(__dirname, "../app/api/forum/[slug]/route.ts");
+    expect(existsSync(routePath)).toBe(true);
+
+    const content = readFileSync(routePath, "utf8");
+    expect(content).toContain("DELETE");
+    expect(content).toContain("deleteForumTopic");
+    expect(content).toContain("authorEmail");
+  });
+
   it("exposes the subscriber API endpoint", () => {
     const routePath = path.resolve(__dirname, "../app/api/subscribers/route.ts");
 

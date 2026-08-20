@@ -94,6 +94,49 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
     }
   };
 
+  const handleDeleteQuestion = async () => {
+    if (!canEditQuestion) {
+      setStatusMessage({ type: "error", message: "You can only delete your own question." });
+      return;
+    }
+
+    const confirmed = window.confirm("Delete this question permanently?");
+    if (!confirmed) {
+      return;
+    }
+
+    setSubmitting(true);
+    setStatusMessage({ type: "idle", message: "" });
+
+    try {
+      const response = await fetch(`/api/forum/${question.slug}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          authorName: question.authorName,
+          authorEmail: question.authorEmail || session?.user?.email || undefined,
+          editorEmail: session?.user?.email || question.authorEmail || undefined,
+        }),
+      });
+
+      const payload = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Unable to delete the question.");
+      }
+
+      setStatusMessage({ type: "success", message: "The question was deleted." });
+      window.location.href = "/forum";
+    } catch (error) {
+      setStatusMessage({
+        type: "error",
+        message: error instanceof Error ? error.message : "Unable to delete the question.",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -211,9 +254,14 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
                       <div className="text-xs text-stone-500 dark:text-stone-400">Member · Research discussion</div>
                     </div>
                     {canEditQuestion ? (
-                      <button type="button" onClick={() => setIsEditingQuestion(true)} className="ml-auto rounded-full border border-stone-300 px-3 py-1.5 text-xs font-medium text-stone-700 hover:border-stone-500 dark:border-stone-700 dark:text-stone-200">
-                        Edit question
-                      </button>
+                      <div className="ml-auto flex gap-2">
+                        <button type="button" onClick={() => setIsEditingQuestion(true)} className="rounded-full border border-stone-300 px-3 py-1.5 text-xs font-medium text-stone-700 hover:border-stone-500 dark:border-stone-700 dark:text-stone-200">
+                          Edit question
+                        </button>
+                        <button type="button" onClick={handleDeleteQuestion} className="rounded-full border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 hover:border-rose-400 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">
+                          Delete
+                        </button>
+                      </div>
                     ) : null}
                   </div>
                 </>

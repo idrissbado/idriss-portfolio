@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createForumReply, getForumTopicBySlug, updateForumTopic } from "@/lib/community-store";
+import { createForumReply, deleteForumTopic, getForumTopicBySlug, updateForumTopic } from "@/lib/community-store";
 
 const replySchema = z.object({
   authorName: z.string().trim().min(2, "Your name is required."),
@@ -97,5 +97,31 @@ export async function PATCH(request: Request, context: { params: Promise<{ slug:
   } catch (error) {
     console.error("Forum topic update failed:", error);
     return NextResponse.json({ error: "The discussion could not be updated." }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request, context: { params: Promise<{ slug: string }> | { slug: string } }) {
+  try {
+    const { slug } = await context.params;
+    const body = await request.json().catch(() => ({}));
+    const authorEmail = typeof body?.authorEmail === "string" ? body.authorEmail.trim() : undefined;
+    const editorEmail = typeof body?.editorEmail === "string" ? body.editorEmail.trim() : undefined;
+    const authorName = typeof body?.authorName === "string" ? body.authorName.trim() : undefined;
+
+    const deleted = await deleteForumTopic({
+      slug,
+      authorEmail,
+      editorEmail,
+      authorName,
+    });
+
+    if (!deleted) {
+      return NextResponse.json({ error: "You are not allowed to delete this discussion." }, { status: 403 });
+    }
+
+    return NextResponse.json({ success: true }, { status: 200 });
+  } catch (error) {
+    console.error("Forum topic deletion failed:", error);
+    return NextResponse.json({ error: "The discussion could not be deleted." }, { status: 500 });
   }
 }

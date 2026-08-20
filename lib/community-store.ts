@@ -453,6 +453,61 @@ export async function updateForumTopic(input: {
   }
 }
 
+export async function deleteForumTopic(input: {
+  slug: string;
+  authorEmail?: string;
+  editorEmail?: string;
+  authorName?: string;
+}) {
+  const slug = input.slug.trim();
+  const authorEmail = input.authorEmail?.trim().toLowerCase();
+  const editorEmail = input.editorEmail?.trim().toLowerCase();
+  const authorName = input.authorName?.trim();
+
+  if (!slug) {
+    return false;
+  }
+
+  try {
+    const topic = await prisma.forumTopic.findUnique({
+      where: { slug },
+    });
+
+    if (!topic) {
+      return false;
+    }
+
+    const isAllowedByEmail = !!editorEmail && !!topic.authorEmail && editorEmail === topic.authorEmail.trim().toLowerCase();
+    const isAllowedByName = !!authorName && topic.authorName.trim().toLowerCase() === authorName.trim().toLowerCase();
+
+    if (!isAllowedByEmail && !isAllowedByName && !(authorEmail && topic.authorEmail && authorEmail === topic.authorEmail.trim().toLowerCase())) {
+      return false;
+    }
+
+    await prisma.forumReply.deleteMany({ where: { topicId: topic.id } });
+    await prisma.forumTopic.delete({ where: { id: topic.id } });
+    return true;
+  } catch (error) {
+    console.error("Forum topic deletion failed:", error);
+    const index = fallbackTopics.findIndex((item) => item.slug === slug);
+    if (index < 0) {
+      return false;
+    }
+
+    const target = fallbackTopics[index];
+    const isAllowedByEmail = !!editorEmail && !!target.authorEmail && editorEmail === target.authorEmail.trim().toLowerCase();
+    const isAllowedByName = !!authorName && target.authorName.trim().toLowerCase() === authorName.trim().toLowerCase();
+    const isAllowedByAuthorEmail = !!authorEmail && !!target.authorEmail && authorEmail === target.authorEmail.trim().toLowerCase();
+
+    if (!isAllowedByEmail && !isAllowedByName && !isAllowedByAuthorEmail) {
+      return false;
+    }
+
+    fallbackTopics.splice(index, 1);
+    return true;
+  }
+}
+
 export async function createForumReply(input: {
   slug: string;
   authorName: string;
