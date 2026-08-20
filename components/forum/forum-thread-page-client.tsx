@@ -86,7 +86,7 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
         </Link>
       </div>
 
-      <article className="rounded-[28px] border border-stone-200 bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.04)] dark:border-stone-800 dark:bg-stone-900 sm:p-8">
+      <article className="rounded-[32px] border border-stone-200 bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.04)] dark:border-stone-800 dark:bg-stone-900 sm:p-8">
         <div className="flex items-center justify-between gap-4">
           <span className="rounded-full border border-stone-200 bg-stone-100 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-stone-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200">
             {topic.category}
@@ -97,8 +97,13 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
         </div>
 
         <h1 className="mt-4 text-3xl font-semibold tracking-tight text-stone-950 dark:text-stone-50">{topic.title}</h1>
-        <div className="mt-3 text-sm text-stone-600 dark:text-stone-300">Started by {topic.authorName}</div>
-        <div className="mt-6 text-stone-700 dark:text-stone-300">
+        <div className="mt-4 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-stone-800 to-stone-500 text-xs font-semibold uppercase text-white dark:from-stone-100 dark:to-stone-400 dark:text-stone-950">
+            {topic.authorName ? topic.authorName.split(" ").filter(Boolean).slice(0,2).map((part) => part[0]?.toUpperCase() ?? "").join("") || "M" : "M"}
+          </div>
+          <div className="text-sm text-stone-600 dark:text-stone-300">Started by {topic.authorName}</div>
+        </div>
+        <div className="mt-6 rounded-2xl border border-stone-200 bg-stone-50/70 p-4 text-stone-700 dark:border-stone-800 dark:bg-stone-950/60 dark:text-stone-300">
           <MathRenderer content={topic.content} />
         </div>
       </article>
@@ -113,14 +118,19 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
             </div>
           ) : (
             replies.map((reply) => (
-              <div key={reply.id} className="rounded-2xl border border-stone-200 bg-stone-50 p-4 dark:border-stone-800 dark:bg-stone-950/60">
+              <div key={reply.id} className="rounded-2xl border border-stone-200 bg-stone-50 p-4 shadow-sm dark:border-stone-800 dark:bg-stone-950/60">
                 <div className="flex items-center justify-between gap-4">
-                  <div className="font-medium text-stone-900 dark:text-stone-50">{reply.authorName}</div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-stone-700 to-stone-400 text-[10px] font-semibold uppercase text-white dark:from-stone-100 dark:to-stone-500 dark:text-stone-950">
+                      {reply.authorName ? reply.authorName.split(" ").filter(Boolean).slice(0,2).map((part) => part[0]?.toUpperCase() ?? "").join("") || "M" : "M"}
+                    </div>
+                    <div className="font-medium text-stone-900 dark:text-stone-50">{reply.authorName}</div>
+                  </div>
                   <div className="text-xs text-stone-500 dark:text-stone-400">
                     {new Date(reply.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                   </div>
                 </div>
-                <div className="mt-3 text-stone-700 dark:text-stone-300">
+                <div className="mt-3 rounded-xl border border-stone-200 bg-white/60 p-3 text-stone-700 dark:border-stone-800 dark:bg-stone-900/60 dark:text-stone-300">
                   <MathRenderer content={reply.content} />
                 </div>
               </div>

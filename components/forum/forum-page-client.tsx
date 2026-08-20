@@ -14,6 +14,15 @@ const defaultForm = {
   content: "",
 };
 
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("") || "M";
+}
+
 export function ForumPageClient({ initialTopics }: { initialTopics: ForumTopic[] }) {
   const { data: session, status } = useSession();
   const [topics, setTopics] = useState(initialTopics);
@@ -102,6 +111,19 @@ export function ForumPageClient({ initialTopics }: { initialTopics: ForumTopic[]
         <p className="mt-5 max-w-3xl text-base leading-7 text-stone-600 dark:text-stone-300">
           A premium community for mathematics, modeling, statistics, AI, and research discussion—designed for serious ideas and clearer reasoning.
         </p>
+
+        <div className="mt-8 grid gap-3 sm:grid-cols-3">
+          {[
+            { label: "Verified members", value: "Member-only" },
+            { label: "Discussion style", value: "Math-first" },
+            { label: "Mathematical format", value: "LaTeX-ready" },
+          ].map((stat) => (
+            <div key={stat.label} className="rounded-2xl border border-stone-200 bg-stone-50/80 p-4 shadow-sm dark:border-stone-800 dark:bg-stone-950/50">
+              <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-stone-500 dark:text-stone-400">{stat.label}</div>
+              <div className="mt-2 text-lg font-semibold text-stone-900 dark:text-stone-50">{stat.value}</div>
+            </div>
+          ))}
+        </div>
       </header>
 
       <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
@@ -218,7 +240,7 @@ export function ForumPageClient({ initialTopics }: { initialTopics: ForumTopic[]
             </div>
           ) : (
             topics.map((topic) => (
-              <article key={topic.id} className="rounded-[28px] border border-stone-200 bg-white p-5 shadow-sm dark:border-stone-800 dark:bg-stone-900">
+              <article key={topic.id} className="rounded-[28px] border border-stone-200 bg-white p-5 shadow-[0_20px_45px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:border-stone-300 dark:border-stone-800 dark:bg-stone-900">
                 <div className="flex items-center justify-between gap-4">
                   <span className="rounded-full border border-stone-200 bg-stone-100 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-stone-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200">
                     {topic.category}
@@ -237,10 +259,15 @@ export function ForumPageClient({ initialTopics }: { initialTopics: ForumTopic[]
                 </div>
 
                 <div className="mt-5 flex items-center justify-between gap-4 border-t border-stone-200 pt-4 dark:border-stone-800">
-                  <div>
-                    <div className="text-sm font-medium text-stone-800 dark:text-stone-100">{topic.authorName}</div>
-                    <div className="text-xs text-stone-500 dark:text-stone-400">
-                      {new Date(topic.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-stone-800 to-stone-500 text-xs font-semibold text-white shadow-sm dark:from-stone-100 dark:to-stone-400 dark:text-stone-950">
+                      {getInitials(topic.authorName || "Member")}
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-stone-800 dark:text-stone-100">{topic.authorName}</div>
+                      <div className="text-xs text-stone-500 dark:text-stone-400">
+                        {new Date(topic.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </div>
                     </div>
                   </div>
                   <Link href={`/forum/${topic.slug}`} className="text-sm font-medium text-stone-700 transition hover:text-stone-950 dark:text-stone-300 dark:hover:text-white">

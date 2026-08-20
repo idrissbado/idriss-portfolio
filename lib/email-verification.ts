@@ -20,7 +20,11 @@ export async function sendVerificationEmail({
 }) {
   const apiKey = process.env.RESEND_API_KEY;
   const fromAddress = process.env.RESEND_FROM ?? "Idriss Olivier Bado <noreply@idrissbado.blog>";
-  const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const siteUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.APP_URL ||
+    process.env.NEXTAUTH_URL ||
+    "https://research.idrissbado.blog";
 
   if (!apiKey) {
     return false;
