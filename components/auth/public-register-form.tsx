@@ -26,23 +26,16 @@ export function PublicRegisterForm() {
         body: JSON.stringify({ name, email, password }),
       });
 
-      const payload = (await response.json()) as { error?: string };
+      const payload = (await response.json()) as {
+        error?: string;
+        message?: string;
+      };
 
       if (!response.ok) {
         throw new Error(payload.error ?? "Unable to create the account.");
       }
 
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
-
-      if (result?.error) {
-        throw new Error("Your account was created, but the login failed. Please sign in manually.");
-      }
-
-      router.push("/forum");
+      router.push(`/login?registered=1`);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to create the account.");

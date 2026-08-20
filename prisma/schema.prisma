@@ -56,13 +56,16 @@ enum Visibility {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String?
-  passwordHash String
-  role         String   @default("admin")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                    String    @id @default(cuid())
+  email                 String    @unique
+  name                  String?
+  passwordHash          String
+  role                  String    @default("member")
+  emailVerified         DateTime?
+  verificationTokenHash String?
+  verificationExpiresAt DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 }
 
 model Subscriber {

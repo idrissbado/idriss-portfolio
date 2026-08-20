@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { MathRenderer } from "@/components/math/math-renderer";
 import type { ForumTopic } from "@/lib/community-store";
 
 const defaultForm = {
@@ -85,12 +86,21 @@ export function ForumPageClient({ initialTopics }: { initialTopics: ForumTopic[]
   };
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
-      <header className="mb-8">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-500">Math forum</p>
-        <h1 className="mt-3 text-4xl font-semibold tracking-tight text-stone-950 dark:text-stone-50">Ask a question and discuss ideas</h1>
-        <p className="mt-4 max-w-2xl text-base leading-7 text-stone-600 dark:text-stone-300">
-          A community space for mathematical reasoning, research discussions, statistics, and applied AI questions.
+    <div className="forum-shell mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <header className="premium-surface mb-10 rounded-[32px] border border-stone-200/80 bg-white/75 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.06)] backdrop-blur-sm dark:border-stone-800 dark:bg-stone-900/75 sm:p-8">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-stone-500">Member forum</p>
+            <h1 className="mt-3 text-4xl font-semibold tracking-tight text-stone-950 dark:text-stone-50 sm:text-5xl">Ask sharp questions. Build rigorous answers.</h1>
+          </div>
+          {!isAuthenticated ? (
+            <Link href="/register" className="inline-flex items-center justify-center rounded-full bg-stone-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-stone-700 dark:bg-stone-100 dark:text-stone-950">
+              Create account
+            </Link>
+          ) : null}
+        </div>
+        <p className="mt-5 max-w-3xl text-base leading-7 text-stone-600 dark:text-stone-300">
+          A premium community for mathematics, modeling, statistics, AI, and research discussion—designed for serious ideas and clearer reasoning.
         </p>
       </header>
 
@@ -222,7 +232,9 @@ export function ForumPageClient({ initialTopics }: { initialTopics: ForumTopic[]
                   {topic.title}
                 </Link>
 
-                <p className="mt-3 text-sm leading-6 text-stone-600 dark:text-stone-300">{topic.excerpt ?? topic.content.slice(0, 180)}</p>
+                <div className="mt-3 text-sm leading-6 text-stone-600 dark:text-stone-300">
+                  <MathRenderer content={topic.excerpt ?? `${topic.content.slice(0, 180)}${topic.content.length > 180 ? "..." : ""}`} />
+                </div>
 
                 <div className="mt-5 flex items-center justify-between gap-4 border-t border-stone-200 pt-4 dark:border-stone-800">
                   <div>

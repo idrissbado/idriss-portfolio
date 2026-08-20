@@ -28,7 +28,10 @@ html {
 }
 
 body {
-  background: linear-gradient(180deg, #f7f2eb 0%, #f4efe8 100%);
+  background:
+    radial-gradient(circle at top left, rgba(96, 165, 250, 0.12), transparent 20%),
+    radial-gradient(circle at bottom right, rgba(31, 41, 55, 0.08), transparent 28%),
+    linear-gradient(180deg, #f7f2eb 0%, #f4efe8 100%);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   line-height: 1.7;
@@ -102,6 +105,55 @@ aside {
 
 .rule {
   border-top: 1px solid var(--border);
+}
+
+.forum-shell {
+  position: relative;
+  background: linear-gradient(180deg, rgba(250, 248, 246, 0.95), rgba(244, 239, 234, 0.95));
+}
+
+.forum-shell::before,
+.forum-shell::after {
+  content: "";
+  position: absolute;
+  inset: auto;
+  width: 26rem;
+  height: 26rem;
+  border-radius: 9999px;
+  filter: blur(60px);
+  opacity: 0.36;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.forum-shell::before {
+  top: -12rem;
+  left: -8rem;
+  background: rgba(56, 189, 248, 0.18);
+}
+
+.forum-shell::after {
+  right: -10rem;
+  bottom: -10rem;
+  background: rgba(168, 85, 247, 0.12);
+}
+
+.forum-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes floatSoft {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0) scale(1.02);
+  }
+}
+
+.premium-surface {
+  animation: floatSoft 10s ease-in-out infinite;
 }
 
 @media (prefers-color-scheme: dark) {

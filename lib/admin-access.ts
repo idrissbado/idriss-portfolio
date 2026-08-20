@@ -7,6 +7,9 @@ export type AdminUser = {
   name: string | null;
   role: string;
   passwordHash: string;
+  emailVerified?: Date | null;
+  verificationTokenHash?: string | null;
+  verificationExpiresAt?: Date | null;
 };
 
 const fallbackUsers = new Map<string, AdminUser>();
@@ -31,6 +34,9 @@ export async function findUserByEmail(email: string) {
       name: fallbackConfig.name,
       role: "admin",
       passwordHash: fallbackConfig.passwordHash,
+      emailVerified: new Date(),
+      verificationTokenHash: null,
+      verificationExpiresAt: null,
     } satisfies AdminUser;
   }
 
@@ -50,10 +56,21 @@ export async function findUserByEmail(email: string) {
   return null;
 }
 
-export async function createUserAccount(input: { email: string; name?: string; password: string; role?: string }) {
+export async function createUserAccount(input: {
+  email: string;
+  name?: string;
+  password: string;
+  role?: string;
+  emailVerified?: Date | null;
+  verificationTokenHash?: string | null;
+  verificationExpiresAt?: Date | null;
+}) {
   const normalizedEmail = input.email.trim().toLowerCase();
   const role = input.role ?? "member";
   const passwordHash = await bcrypt.hash(input.password, 10);
+  const emailVerified = input.emailVerified ?? (role === "admin" ? new Date() : null);
+  const verificationTokenHash = input.verificationTokenHash ?? null;
+  const verificationExpiresAt = input.verificationExpiresAt ?? null;
 
   const fallbackConfig = getFallbackAdminConfig();
   if (normalizedEmail === fallbackConfig.email) {
@@ -63,6 +80,9 @@ export async function createUserAccount(input: { email: string; name?: string; p
       name: input.name || fallbackConfig.name,
       role,
       passwordHash: fallbackConfig.passwordHash,
+      emailVerified: emailVerified ?? new Date(),
+      verificationTokenHash,
+      verificationExpiresAt,
     };
     fallbackUsers.set(normalizedEmail, fallbackUser);
     return fallbackUser;
@@ -75,6 +95,9 @@ export async function createUserAccount(input: { email: string; name?: string; p
         name: input.name || normalizedEmail,
         passwordHash,
         role,
+        emailVerified,
+        verificationTokenHash,
+        verificationExpiresAt,
       },
     });
 

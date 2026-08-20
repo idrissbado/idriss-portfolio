@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createUserAccount, findUserByEmail } from "@/lib/admin-access";
+import { hashVerificationToken, sendVerificationEmail, generateVerificationToken } from "@/lib/email-verification";
 
 export async function POST(request: Request) {
   try {
@@ -17,11 +18,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
     }
 
+    const token = generateVerificationToken();
+    const verificationExpiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24);
     const user = await createUserAccount({
       email,
       name: name || email,
       password,
       role: "member",
+      emailVerified: null,
+      verificationTokenHash: hashVerificationToken(token),
+      verificationExpiresAt,
+    });
+
+    const sent = await sendVerificationEmail({
+      name: user.name ?? "Community member",
+      email: user.email,
+      token,
     });
 
     return NextResponse.json({
@@ -29,6 +41,10 @@ export async function POST(request: Request) {
       email: user.email,
       name: user.name,
       role: user.role,
+      verificationSent: sent,
+      message: sent
+        ? "Account created. Check your inbox to verify your email before logging in."
+        : "Account created, but this environment has no Resend API key configured for verification emails.",
     });
   } catch (error) {
     console.error("Register API error:", error);

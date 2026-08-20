@@ -31,6 +31,15 @@ describe("community features", () => {
     expect(content).toContain("register");
   });
 
+  it("supports email verification before login", () => {
+    const verifyPath = path.resolve(__dirname, "../app/verify-email/page.tsx");
+    expect(existsSync(verifyPath)).toBe(true);
+
+    const content = readFileSync(verifyPath, "utf8");
+    expect(content).toContain("verify");
+    expect(content).toContain("token");
+  });
+
   it("exposes the subscriber API endpoint", () => {
     const routePath = path.resolve(__dirname, "../app/api/subscribers/route.ts");
 

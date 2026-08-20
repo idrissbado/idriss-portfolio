@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { MathRenderer } from "@/components/math/math-renderer";
 import type { ForumReplyRecord, ForumTopic } from "@/lib/community-store";
 
 export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
@@ -97,7 +98,9 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
 
         <h1 className="mt-4 text-3xl font-semibold tracking-tight text-stone-950 dark:text-stone-50">{topic.title}</h1>
         <div className="mt-3 text-sm text-stone-600 dark:text-stone-300">Started by {topic.authorName}</div>
-        <div className="mt-6 whitespace-pre-wrap text-base leading-8 text-stone-700 dark:text-stone-300">{topic.content}</div>
+        <div className="mt-6 text-stone-700 dark:text-stone-300">
+          <MathRenderer content={topic.content} />
+        </div>
       </article>
 
       <section className="mt-8 rounded-[28px] border border-stone-200 bg-white p-6 shadow-sm dark:border-stone-800 dark:bg-stone-900">
@@ -117,7 +120,9 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
                     {new Date(reply.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                   </div>
                 </div>
-                <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-stone-700 dark:text-stone-300">{reply.content}</p>
+                <div className="mt-3 text-stone-700 dark:text-stone-300">
+                  <MathRenderer content={reply.content} />
+                </div>
               </div>
             ))
           )}

@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -19,7 +21,14 @@ const navItems = [
 ];
 
 export function AcademicHeader() {
+  const router = useRouter();
+  const { data: session } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleForumNavigation = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    router.push(session ? "/forum" : "/register");
+  };
 
   return (
     <header className="sticky top-0 z-40 border-b border-stone-200/80 bg-[#f7f2ec]/85 backdrop-blur-xl dark:border-stone-800 dark:bg-stone-950/85">
@@ -41,6 +50,7 @@ export function AcademicHeader() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={item.href === "/forum" ? handleForumNavigation : undefined}
                 className={cn(
                   "rounded-full px-3 py-2 text-sm font-medium tracking-[-0.01em] text-stone-600 transition hover:bg-stone-100 hover:text-stone-950 dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-white",
                   item.href === "/research" && "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-950"
@@ -70,7 +80,7 @@ export function AcademicHeader() {
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={item.href === "/forum" ? (event) => { setMobileMenuOpen(false); handleForumNavigation(event); } : () => setMobileMenuOpen(false)}
                 className={cn(
                   "rounded-2xl px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-100 hover:text-stone-950 dark:text-stone-200 dark:hover:bg-stone-800 dark:hover:text-white",
                   item.href === "/research" && "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-950"
