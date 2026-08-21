@@ -17,6 +17,13 @@ type NoteRecord = {
   content: string;
 };
 
+const noteStatusValues = {
+  Draft: "DRAFT",
+  Public: "PUBLIC",
+  Private: "PRIVATE",
+  Archived: "ARCHIVED",
+} as const satisfies Record<NoteRecord["status"], string>;
+
 export default function EditNotePage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
@@ -28,18 +35,24 @@ export default function EditNotePage() {
 
   useEffect(() => {
     if (!noteId) {
-      setIsLoading(false);
       return;
     }
 
     async function loadNote() {
       try {
-        const response = await fetch(`/api/admin/notes?id=${encodeURIComponent(noteId)}`);
+        setError("");
+        const response = await fetch(`/api/admin/notes/${encodeURIComponent(noteId)}`);
+        const payload = await response.json().catch(() => ({}));
+
         if (!response.ok) {
-          throw new Error("The note could not be loaded.");
+          throw new Error(payload.error || "The note could not be loaded.");
         }
-        const payload = await response.json();
-        setNote(payload.note ?? null);
+
+        if (!payload.note) {
+          throw new Error("The note could not be found.");
+        }
+
+        setNote(payload.note);
       } catch (err) {
         setError((err as Error).message || "The note could not be loaded.");
       } finally {
@@ -59,7 +72,7 @@ export default function EditNotePage() {
     setIsSaving(true);
 
     try {
-      const response = await fetch(`/api/admin/notes?id=${encodeURIComponent(noteId)}`, {
+      const response = await fetch(`/api/admin/notes/${encodeURIComponent(noteId)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -68,7 +81,7 @@ export default function EditNotePage() {
           abstract: note.abstract,
           authors: note.authors,
           subject: note.subject,
-          status: note.status === "Public" ? "PUBLIC" : "DRAFT",
+          status: noteStatusValues[note.status],
           tags: note.tags,
           content: note.content,
           featured: note.status === "Public",

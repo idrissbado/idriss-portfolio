@@ -2,15 +2,19 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getResearchNoteById, updateResearchNote } from "@/lib/content-store";
 
-export async function GET(request: Request) {
+type NoteRouteContext = {
+  params: Promise<{ id: string }>;
+};
+
+export async function GET(_request: Request, context: NoteRouteContext) {
   try {
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id")?.trim();
+    const { id: routeId } = await context.params;
+    const id = routeId.trim();
 
     if (!id) {
       return NextResponse.json({ error: "Note id is required." }, { status: 400 });
@@ -28,15 +32,15 @@ export async function GET(request: Request) {
   }
 }
 
-export async function PUT(request: Request) {
+export async function PUT(request: Request, context: NoteRouteContext) {
   try {
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id")?.trim();
+    const { id: routeId } = await context.params;
+    const id = routeId.trim();
     if (!id) {
       return NextResponse.json({ error: "Note id is required." }, { status: 400 });
     }
