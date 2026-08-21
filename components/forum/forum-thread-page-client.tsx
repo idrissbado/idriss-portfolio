@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { ForumAccountControl } from "@/components/forum/forum-account-control";
 import { MathComposer } from "@/components/math/math-composer";
 import { MathRenderer } from "@/components/math/math-renderer";
 import type { ForumReplyRecord, ForumTopic } from "@/lib/community-store";
+import { getPrivateFallbackNickname } from "@/lib/nickname";
 
 function getInitials(name: string) {
   return name
@@ -18,6 +20,7 @@ function getInitials(name: string) {
 }
 
 export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
+  const router = useRouter();
   const { data: session, status } = useSession();
   const [question, setQuestion] = useState<ForumTopic>(topic);
   const [replies, setReplies] = useState<ForumReplyRecord[]>(topic.replies);
@@ -40,10 +43,12 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
 
   const isAuthenticated = status === "authenticated";
   const isModerator = ["admin", "editor"].includes(session?.user?.role?.toLowerCase() ?? "");
-  const canEditQuestion = isAuthenticated && (
-    (session?.user?.email && question.authorEmail && session.user.email.toLowerCase() === question.authorEmail.toLowerCase()) ||
-    (session?.user?.name && question.authorName && session.user.name.trim().toLowerCase() === question.authorName.trim().toLowerCase())
+  const publicNickname = session?.user?.nickname || (session?.user?.id ? getPrivateFallbackNickname(session.user.id) : "");
+  const ownsQuestion = Boolean(
+    (publicNickname && question.authorName && publicNickname === question.authorName.trim().toLowerCase()) ||
+    (session?.user?.name && question.authorName && session.user.name.trim().toLowerCase() === question.authorName.trim().toLowerCase()),
   );
+  const canEditQuestion = isAuthenticated && (isModerator || ownsQuestion);
   const canEditReply = (reply: ForumReplyRecord) => {
     if (!isAuthenticated) {
       return false;
@@ -53,18 +58,9 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
       return true;
     }
 
-    const sessionEmail = session?.user?.email?.trim().toLowerCase();
-    const replyEmail = reply.authorEmail?.trim().toLowerCase();
-
-    if (sessionEmail && replyEmail) {
-      return sessionEmail === replyEmail;
-    }
-
     return Boolean(
-      !replyEmail &&
-      session?.user?.name &&
-      reply.authorName &&
-      session.user.name.trim().toLowerCase() === reply.authorName.trim().toLowerCase(),
+      (publicNickname && reply.authorName && publicNickname === reply.authorName.trim().toLowerCase()) ||
+      (session?.user?.name && reply.authorName && session.user.name.trim().toLowerCase() === reply.authorName.trim().toLowerCase()),
     );
   };
   const votes = Math.max(replies.length + 1, 1);
@@ -90,9 +86,6 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
           category: questionDraft.category,
           imageUrl: questionDraft.imageUrl || undefined,
           imageAltText: questionDraft.imageAltText || undefined,
-          authorName: session?.user?.name || question.authorName,
-          authorEmail: session?.user?.email || question.authorEmail || undefined,
-          editorEmail: session?.user?.email || question.authorEmail || undefined,
         }),
       });
 
@@ -142,12 +135,6 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
     try {
       const response = await fetch(`/api/forum/${question.slug}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          authorName: question.authorName,
-          authorEmail: question.authorEmail || session?.user?.email || undefined,
-          editorEmail: session?.user?.email || question.authorEmail || undefined,
-        }),
       });
 
       const payload = (await response.json()) as { error?: string };
@@ -157,7 +144,8 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
       }
 
       setStatusMessage({ type: "success", message: "The question was deleted." });
-      window.location.href = "/forum";
+      router.push("/forum");
+      router.refresh();
     } catch (error) {
       setStatusMessage({
         type: "error",
@@ -568,7 +556,7 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
           ) : (
             <form onSubmit={handleSubmit} className="mt-5 space-y-4">
               <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-600 dark:border-stone-800 dark:bg-stone-950/60 dark:text-stone-300">
-                Posting as <span className="font-semibold text-stone-900 dark:text-stone-100">{session?.user?.name || session?.user?.email}</span>
+                Posting publicly as <span className="font-semibold text-stone-900 dark:text-stone-100">@{publicNickname}</span>
               </div>
 
               <label htmlFor="new-answer-content" className="block text-sm font-medium text-stone-700 dark:text-stone-300">

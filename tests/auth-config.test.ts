@@ -11,6 +11,6 @@ describe("admin auth flow", () => {
   it("uses the admin login page as the sign-in entrypoint", async () => {
     const { authOptions } = await import("../lib/auth");
 
-    expect(authOptions.pages?.signIn).toBe("/admin/login");
+    expect(authOptions.pages?.signIn).toBe("/login");
   });
 });

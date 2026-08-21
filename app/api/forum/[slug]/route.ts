@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { createForumReply, deleteForumTopic, getForumTopicBySlug, updateForumTopic } from "@/lib/community-store";
+import { getPrivateFallbackNickname } from "@/lib/nickname";
 
 const replySchema = z.object({
   content: z.string().trim().min(2, "A reply cannot be empty."),
@@ -10,9 +11,6 @@ const replySchema = z.object({
 const topicUpdateSchema = z.object({
   title: z.string().trim().min(3, "A title is required.").optional(),
   content: z.string().trim().min(10, "Please add a little more context to the discussion.").optional(),
-  authorName: z.string().trim().min(2, "Your name is required.").optional(),
-  authorEmail: z.string().trim().email("Please provide a valid email address.").optional().or(z.literal("")),
-  editorEmail: z.string().trim().email("Please provide a valid email address.").optional().or(z.literal("")),
   category: z.string().trim().max(60).optional().or(z.literal("")),
   excerpt: z.string().trim().max(250).optional().or(z.literal("")),
   imageUrl: z
@@ -25,6 +23,8 @@ const topicUpdateSchema = z.object({
     .optional(),
   imageAltText: z.string().trim().max(120).optional().or(z.literal("")),
 });
+
+const moderatorRoles = new Set(["admin", "editor"]);
 
 export async function GET(_request: Request, context: { params: Promise<{ slug: string }> | { slug: string } }) {
   const { slug } = await context.params;
@@ -58,7 +58,7 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
 
     const reply = await createForumReply({
       slug,
-      authorName: session.user.name?.trim() || session.user.email,
+      authorName: session.user.nickname || getPrivateFallbackNickname(session.user.id),
       authorEmail: session.user.email,
       content: parsed.data.content,
     });
@@ -76,6 +76,12 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
 
 export async function PATCH(request: Request, context: { params: Promise<{ slug: string }> | { slug: string } }) {
   try {
+    const session = await auth();
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Please log in to edit this discussion." }, { status: 401 });
+    }
+
     const { slug } = await context.params;
     const body = await request.json();
     const parsed = topicUpdateSchema.safeParse(body);
@@ -97,9 +103,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ slug:
       title: parsed.data.title ?? existing.title,
       content: parsed.data.content ?? existing.content,
       category: parsed.data.category || existing.category,
-      authorName: parsed.data.authorName ?? existing.authorName,
-      authorEmail: parsed.data.authorEmail || existing.authorEmail || undefined,
-      editorEmail: parsed.data.editorEmail || existing.authorEmail || undefined,
+      editorEmail: session.user.email,
+      editorName: session.user.nickname || getPrivateFallbackNickname(session.user.id),
+      isModerator: moderatorRoles.has(session.user.role?.toLowerCase() ?? ""),
       excerpt: parsed.data.excerpt || existing.excerpt || undefined,
       imageUrl: parsed.data.imageUrl || existing.imageUrl || undefined,
       imageAltText: parsed.data.imageAltText || existing.imageAltText || undefined,
@@ -116,19 +122,21 @@ export async function PATCH(request: Request, context: { params: Promise<{ slug:
   }
 }
 
-export async function DELETE(request: Request, context: { params: Promise<{ slug: string }> | { slug: string } }) {
+export async function DELETE(_request: Request, context: { params: Promise<{ slug: string }> | { slug: string } }) {
   try {
+    const session = await auth();
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Please log in to delete this discussion." }, { status: 401 });
+    }
+
     const { slug } = await context.params;
-    const body = await request.json().catch(() => ({}));
-    const authorEmail = typeof body?.authorEmail === "string" ? body.authorEmail.trim() : undefined;
-    const editorEmail = typeof body?.editorEmail === "string" ? body.editorEmail.trim() : undefined;
-    const authorName = typeof body?.authorName === "string" ? body.authorName.trim() : undefined;
 
     const deleted = await deleteForumTopic({
       slug,
-      authorEmail,
-      editorEmail,
-      authorName,
+      editorEmail: session.user.email,
+      editorName: session.user.nickname || getPrivateFallbackNickname(session.user.id),
+      isModerator: moderatorRoles.has(session.user.role?.toLowerCase() ?? ""),
     });
 
     if (!deleted) {

@@ -59,6 +59,7 @@ model User {
   id                    String    @id @default(cuid())
   email                 String    @unique
   name                  String?
+  nickname              String    @unique
   passwordHash          String
   role                  String    @default("member")
   emailVerified         DateTime?
@@ -80,33 +81,33 @@ model Subscriber {
 }
 
 model ForumTopic {
-  id          String       @id @default(cuid())
-  slug        String       @unique
-  title       String
-  category    String       @default("General")
-  excerpt     String?
-  content     String
-  imageUrl    String?
+  id           String       @id @default(cuid())
+  slug         String       @unique
+  title        String
+  category     String       @default("General")
+  excerpt      String?
+  content      String
+  imageUrl     String?
   imageAltText String?
-  authorName  String
-  authorEmail String?
-  published   Boolean      @default(true)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  replies     ForumReply[]
+  authorName   String
+  authorEmail  String?
+  published    Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  replies      ForumReply[]
 }
 
 model ForumReply {
-  id          String     @id @default(cuid())
-  topicId     String
-  authorName  String
-  authorEmail String?
-  content     String
-  imageUrl    String?
+  id           String     @id @default(cuid())
+  topicId      String
+  authorName   String
+  authorEmail  String?
+  content      String
+  imageUrl     String?
   imageAltText String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  topic       ForumTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  topic        ForumTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
 }
 
 model Profile {
@@ -156,163 +157,163 @@ model Tag {
 }
 
 model Publication {
-  id                String                  @id @default(cuid())
-  title             String
-  slug              String                  @unique
-  authors           String
-  publicationYear   Int
-  journal           String?
-  volume            String?
-  issue             String?
-  pages             String?
-  publisher         String?
-  publicationType   PublicationType
-  status            PublicationStatus
-  abstract          String
-  keywords          String[]                @default([])
-  doi               String?
-  externalUrl       String?
-  pdfUrl            String?
-  arxivUrl          String?
-  repositoryUrl     String?
-  bibtex            String?
-  citation          String?
-  featured          Boolean                 @default(false)
-  publishedAt       DateTime?
-  createdAt         DateTime                @default(now())
-  updatedAt         DateTime                @updatedAt
-  researchAreas     PublicationResearchArea[]
-  tags              PublicationTag[]
-  relatedNotes      ResearchNote[]          @relation("PublicationRelatedNotes")
-  relatedProjects   Project[]               @relation("PublicationProjects")
+  id              String                    @id @default(cuid())
+  title           String
+  slug            String                    @unique
+  authors         String
+  publicationYear Int
+  journal         String?
+  volume          String?
+  issue           String?
+  pages           String?
+  publisher       String?
+  publicationType PublicationType
+  status          PublicationStatus
+  abstract        String
+  keywords        String[]                  @default([])
+  doi             String?
+  externalUrl     String?
+  pdfUrl          String?
+  arxivUrl        String?
+  repositoryUrl   String?
+  bibtex          String?
+  citation        String?
+  featured        Boolean                   @default(false)
+  publishedAt     DateTime?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  researchAreas   PublicationResearchArea[]
+  tags            PublicationTag[]
+  relatedNotes    ResearchNote[]            @relation("PublicationRelatedNotes")
+  relatedProjects Project[]                 @relation("PublicationProjects")
 }
 
 model ResearchNote {
-  id               String                   @id @default(cuid())
-  title            String
-  slug             String                   @unique
-  subtitle         String?
-  abstract         String
-  authors          String
-  date             DateTime
-  lastUpdated      DateTime?
-  subject          String?
-  tags             ResearchNoteTag[]
-  status           ResearchNoteStatus       @default(DRAFT)
-  content          String
-  references       String?
-  pdfUrl           String?
-  featured         Boolean                  @default(false)
-  visibility       Visibility               @default(PUBLIC)
-  createdAt        DateTime                 @default(now())
-  updatedAt        DateTime                 @updatedAt
-  researchAreas    ResearchNoteResearchArea[]
-  relatedPublications Publication[]          @relation("PublicationRelatedNotes")
-  relatedNotes     ResearchNoteRelation[]   @relation("NoteSource")
-  reverseRelatedNotes ResearchNoteRelation[] @relation("NoteTarget")
+  id                  String                     @id @default(cuid())
+  title               String
+  slug                String                     @unique
+  subtitle            String?
+  abstract            String
+  authors             String
+  date                DateTime
+  lastUpdated         DateTime?
+  subject             String?
+  tags                ResearchNoteTag[]
+  status              ResearchNoteStatus         @default(DRAFT)
+  content             String
+  references          String?
+  pdfUrl              String?
+  featured            Boolean                    @default(false)
+  visibility          Visibility                 @default(PUBLIC)
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
+  researchAreas       ResearchNoteResearchArea[]
+  relatedPublications Publication[]              @relation("PublicationRelatedNotes")
+  relatedNotes        ResearchNoteRelation[]     @relation("NoteSource")
+  reverseRelatedNotes ResearchNoteRelation[]     @relation("NoteTarget")
 }
 
 model Project {
-  id                String                 @id @default(cuid())
-  title             String
-  slug              String                 @unique
-  summary           String
-  description       String
-  projectType       ProjectType
-  status            ProjectStatus
-  startDate         DateTime?
-  endDate           DateTime?
-  technologies      String[]               @default([])
-  organization      String?
-  role              String?
-  problem           String?
-  approach          String?
-  architecture      String?
-  results           String?
+  id                  String                @id @default(cuid())
+  title               String
+  slug                String                @unique
+  summary             String
+  description         String
+  projectType         ProjectType
+  status              ProjectStatus
+  startDate           DateTime?
+  endDate             DateTime?
+  technologies        String[]              @default([])
+  organization        String?
+  role                String?
+  problem             String?
+  approach            String?
+  architecture        String?
+  results             String?
   technicalChallenges String?
-  githubUrl         String?
-  liveUrl           String?
-  documentationUrl  String?
-  coverImage        String?
-  gallery           String[]               @default([])
-  featured          Boolean                @default(false)
-  visibility        Visibility             @default(PUBLIC)
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
-  researchAreas     ProjectResearchArea[]
-  tags              ProjectTag[]
-  relatedPublications Publication[]        @relation("PublicationProjects")
+  githubUrl           String?
+  liveUrl             String?
+  documentationUrl    String?
+  coverImage          String?
+  gallery             String[]              @default([])
+  featured            Boolean               @default(false)
+  visibility          Visibility            @default(PUBLIC)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  researchAreas       ProjectResearchArea[]
+  tags                ProjectTag[]
+  relatedPublications Publication[]         @relation("PublicationProjects")
 }
 
 model Teaching {
-  id          String   @id @default(cuid())
-  title       String
-  institution String?
+  id           String   @id @default(cuid())
+  title        String
+  institution  String?
   academicYear String?
-  level       String?
-  description String?
-  topics      String[] @default([])
-  materials   String[] @default([])
-  status      String   @default("active")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  level        String?
+  description  String?
+  topics       String[] @default([])
+  materials    String[] @default([])
+  status       String   @default("active")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Experience {
-  id          String   @id @default(cuid())
-  title       String
+  id           String    @id @default(cuid())
+  title        String
   organization String
-  location    String?
-  startDate   DateTime?
-  endDate     DateTime?
-  description String?
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  location     String?
+  startDate    DateTime?
+  endDate      DateTime?
+  description  String?
+  sortOrder    Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }
 
 model Education {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   degree      String
   institution String
   location    String?
   startDate   DateTime?
   endDate     DateTime?
   description String?
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model Award {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   title       String
   issuer      String?
   date        DateTime?
   description String?
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model Certification {
-  id          String   @id @default(cuid())
-  title       String
-  issuer      String?
-  date        DateTime?
+  id            String    @id @default(cuid())
+  title         String
+  issuer        String?
+  date          DateTime?
   credentialUrl String?
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  sortOrder     Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 model Skill {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  category    String?
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  name      String   @unique
+  category  String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Language {
@@ -325,35 +326,35 @@ model Language {
 }
 
 model MediaAsset {
-  id          String   @id @default(cuid())
-  filename    String
+  id           String   @id @default(cuid())
+  filename     String
   originalName String
-  mimeType    String
-  size        Int
-  kind        String   @default("image")
-  url         String
-  altText     String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  mimeType     String
+  size         Int
+  kind         String   @default("image")
+  url          String
+  altText      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model SiteSetting {
-  id          String   @id @default(cuid())
-  key         String   @unique
-  value       String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model SocialLink {
-  id          String   @id @default(cuid())
-  label       String
-  url         String
-  type        String
-  sortOrder   Int      @default(0)
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  label     String
+  url       String
+  type      String
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model PublicationTag {
@@ -366,10 +367,10 @@ model PublicationTag {
 }
 
 model ResearchNoteTag {
-  noteId   String
-  tagId    String
-  note     ResearchNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
-  tag      Tag          @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  noteId String
+  tagId  String
+  note   ResearchNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  tag    Tag          @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([noteId, tagId])
 }
@@ -384,28 +385,28 @@ model ProjectTag {
 }
 
 model PublicationResearchArea {
-  publicationId String
+  publicationId  String
   researchAreaId String
-  publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
-  researchArea  ResearchArea @relation(fields: [researchAreaId], references: [id], onDelete: Cascade)
+  publication    Publication  @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  researchArea   ResearchArea @relation(fields: [researchAreaId], references: [id], onDelete: Cascade)
 
   @@id([publicationId, researchAreaId])
 }
 
 model ResearchNoteResearchArea {
-  noteId        String
+  noteId         String
   researchAreaId String
-  note          ResearchNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
-  researchArea  ResearchArea @relation(fields: [researchAreaId], references: [id], onDelete: Cascade)
+  note           ResearchNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  researchArea   ResearchArea @relation(fields: [researchAreaId], references: [id], onDelete: Cascade)
 
   @@id([noteId, researchAreaId])
 }
 
 model ProjectResearchArea {
-  projectId       String
-  researchAreaId  String
-  project         Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  researchArea    ResearchArea @relation(fields: [researchAreaId], references: [id], onDelete: Cascade)
+  projectId      String
+  researchAreaId String
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  researchArea   ResearchArea @relation(fields: [researchAreaId], references: [id], onDelete: Cascade)
 
   @@id([projectId, researchAreaId])
 }

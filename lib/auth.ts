@@ -45,7 +45,8 @@ export const authOptions: NextAuthOptions = {
         return {
           id: user.id,
           email: user.email,
-          name: user.name ?? user.email,
+          name: user.name ?? user.nickname,
+          nickname: user.nickname,
           role: user.role ?? "member",
           emailVerified: user.emailVerified ? user.emailVerified.toISOString() : null,
         };
@@ -58,6 +59,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = user.role ?? "member";
         token.name = String(user.name ?? user.email ?? "");
+        token.nickname = String(user.nickname ?? "");
         token.emailVerified = user.emailVerified
           ? typeof user.emailVerified === "string"
             ? user.emailVerified
@@ -70,6 +72,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = String(token.id ?? session.user.email ?? "");
         session.user.name = String(token.name ?? session.user.name ?? "");
+        session.user.nickname = String(token.nickname ?? "");
         session.user.role = String(token.role ?? "member");
         session.user.emailVerified = token.emailVerified ?? null;
       }

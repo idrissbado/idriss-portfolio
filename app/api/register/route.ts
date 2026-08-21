@@ -1,28 +1,73 @@
 import { NextResponse } from "next/server";
-import { createUserAccount, findUserByEmail } from "@/lib/admin-access";
+import { z } from "zod";
+import {
+  AccountConflictError,
+  createUserAccount,
+  findUserByEmail,
+  findUserByNickname,
+} from "@/lib/admin-access";
 import { hashVerificationToken, sendVerificationEmail, generateVerificationToken } from "@/lib/email-verification";
+import { getNicknameValidationError, normalizeNickname } from "@/lib/nickname";
+
+const registrationSchema = z.object({
+  name: z.string().trim().max(100).optional().or(z.literal("")),
+  nickname: z.string().trim(),
+  email: z.string().trim().email("Please provide a valid email address."),
+  password: z.string().min(6, "Password must contain at least 6 characters.").max(128),
+});
+
+export async function GET(request: Request) {
+  const nickname = normalizeNickname(new URL(request.url).searchParams.get("nickname") ?? "");
+  const validationError = getNicknameValidationError(nickname);
+
+  if (validationError) {
+    return NextResponse.json({ available: false, error: validationError }, { status: 400 });
+  }
+
+  const existingUser = await findUserByNickname(nickname);
+  return NextResponse.json({ available: !existingUser, nickname }, { status: 200 });
+}
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as { name?: string; email?: string; password?: string };
-    const name = body.name?.trim();
-    const email = body.email?.trim().toLowerCase();
-    const password = body.password ?? "";
+    const parsed = registrationSchema.safeParse(await request.json());
 
-    if (!email || !password || password.length < 6) {
-      return NextResponse.json({ error: "Please provide a valid email and a password with at least 6 characters." }, { status: 400 });
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Please provide valid registration details." },
+        { status: 400 },
+      );
     }
 
-    const existingUser = await findUserByEmail(email);
-    if (existingUser) {
+    const name = parsed.data.name || undefined;
+    const nickname = normalizeNickname(parsed.data.nickname);
+    const email = parsed.data.email.toLowerCase();
+    const password = parsed.data.password;
+    const nicknameError = getNicknameValidationError(nickname);
+
+    if (nicknameError) {
+      return NextResponse.json({ error: nicknameError, field: "nickname" }, { status: 400 });
+    }
+
+    const [existingEmail, existingNickname] = await Promise.all([
+      findUserByEmail(email),
+      findUserByNickname(nickname),
+    ]);
+
+    if (existingEmail) {
       return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
+    }
+
+    if (existingNickname) {
+      return NextResponse.json({ error: "This nickname is already taken. Please choose another one.", field: "nickname" }, { status: 409 });
     }
 
     const token = generateVerificationToken();
     const verificationExpiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24);
     const user = await createUserAccount({
       email,
-      name: name || email,
+      name,
+      nickname,
       password,
       role: "member",
       emailVerified: null,
@@ -31,7 +76,7 @@ export async function POST(request: Request) {
     });
 
     const sent = await sendVerificationEmail({
-      name: user.name ?? "Community member",
+      name: user.name ?? user.nickname,
       email: user.email,
       token,
     });
@@ -39,7 +84,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       id: user.id,
       email: user.email,
-      name: user.name,
+      nickname: user.nickname,
       role: user.role,
       verificationSent: sent,
       message: sent
@@ -47,6 +92,16 @@ export async function POST(request: Request) {
         : "Account created, but this environment has no Resend API key configured for verification emails.",
     });
   } catch (error) {
+    if (error instanceof AccountConflictError) {
+      return NextResponse.json(
+        {
+          error: error.message,
+          field: error.field,
+        },
+        { status: 409 },
+      );
+    }
+
     console.error("Register API error:", error);
     return NextResponse.json({ error: "Unable to create the account." }, { status: 500 });
   }

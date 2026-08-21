@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { deleteForumReply, updateForumReply } from "@/lib/community-store";
+import { getPrivateFallbackNickname } from "@/lib/nickname";
 
 const replyUpdateSchema = z.object({
   content: z.string().trim().min(2, "A reply cannot be empty."),
@@ -36,7 +37,7 @@ export async function PATCH(
       replyId,
       content: parsed.data.content,
       editorEmail: session.user.email,
-      editorName: session.user.name ?? undefined,
+      editorName: session.user.nickname || getPrivateFallbackNickname(session.user.id),
       isModerator: moderatorRoles.has(session.user.role?.toLowerCase() ?? ""),
     });
 
@@ -68,7 +69,7 @@ export async function DELETE(
       slug,
       replyId,
       editorEmail: session.user.email,
-      editorName: session.user.name ?? undefined,
+      editorName: session.user.nickname || getPrivateFallbackNickname(session.user.id),
       isModerator: moderatorRoles.has(session.user.role?.toLowerCase() ?? ""),
     });
 

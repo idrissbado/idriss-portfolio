@@ -1,7 +1,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { createUserAccount, findUserByEmail, listUsers } from "@/lib/admin-access";
+import { createUserAccount, findUserByEmail, findUserByNickname, listUsers } from "@/lib/admin-access";
+import { normalizeNickname } from "@/lib/nickname";
 
 async function createUser(formData: FormData) {
   "use server";
@@ -14,22 +15,31 @@ async function createUser(formData: FormData) {
 
   const email = formData.get("email")?.toString().trim();
   const name = formData.get("name")?.toString().trim();
+  const nickname = normalizeNickname(formData.get("nickname")?.toString() ?? "");
   const password = formData.get("password")?.toString();
   const role = formData.get("role")?.toString() ?? "admin";
 
-  if (!email || !password) {
+  if (!email || !nickname || !password) {
     redirect("/admin/users?error=missing-fields");
   }
 
-  const existingUser = await findUserByEmail(email);
+  const [existingUser, existingNickname] = await Promise.all([
+    findUserByEmail(email),
+    findUserByNickname(nickname),
+  ]);
 
   if (existingUser) {
     redirect("/admin/users?error=user-exists");
   }
 
+  if (existingNickname) {
+    redirect("/admin/users?error=nickname-exists");
+  }
+
   await createUserAccount({
     email,
     name,
+    nickname,
     password,
     role,
   });
@@ -65,7 +75,7 @@ export default async function AdminUsersPage() {
         <section className="rounded-[24px] border border-stone-200 bg-white/80 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.04)] backdrop-blur-sm dark:border-stone-800 dark:bg-stone-900/80">
           <h2 className="text-lg font-semibold text-stone-900 dark:text-stone-50">Create new access</h2>
           <form action={createUser} className="mt-5 space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <label className="space-y-2 text-sm text-stone-700 dark:text-stone-300">
                 <span>Email</span>
                 <input
@@ -74,6 +84,19 @@ export default async function AdminUsersPage() {
                   required
                   className="w-full rounded-2xl border border-stone-300 bg-white px-3 py-2 text-sm outline-none ring-0 dark:border-stone-700 dark:bg-stone-950"
                   placeholder="person@example.com"
+                />
+              </label>
+              <label className="space-y-2 text-sm text-stone-700 dark:text-stone-300">
+                <span>Public nickname</span>
+                <input
+                  name="nickname"
+                  type="text"
+                  required
+                  minLength={3}
+                  maxLength={24}
+                  pattern="[a-z0-9][a-z0-9_-]{2,23}"
+                  className="w-full rounded-2xl border border-stone-300 bg-white px-3 py-2 text-sm outline-none ring-0 dark:border-stone-700 dark:bg-stone-950"
+                  placeholder="jane-doe"
                 />
               </label>
               <label className="space-y-2 text-sm text-stone-700 dark:text-stone-300">
@@ -129,6 +152,7 @@ export default async function AdminUsersPage() {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="font-medium text-stone-900 dark:text-stone-50">{user.name || user.email}</p>
+                      <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">@{user.nickname}</p>
                       <p className="text-sm text-stone-600 dark:text-stone-300">{user.email}</p>
                     </div>
                     <span className="rounded-full border border-stone-300 px-2.5 py-1 text-[11px] uppercase tracking-[0.18em] text-stone-600 dark:border-stone-700 dark:text-stone-300">

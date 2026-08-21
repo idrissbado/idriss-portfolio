@@ -124,7 +124,7 @@ const normalizeReply = (reply: {
   id: reply.id,
   topicId: reply.topicId,
   authorName: reply.authorName,
-  authorEmail: reply.authorEmail ?? null,
+  authorEmail: null,
   content: reply.content,
   imageUrl: reply.imageUrl ?? null,
   imageAltText: reply.imageAltText ?? null,
@@ -179,7 +179,7 @@ const normalizeTopic = (topic: {
     imageUrl: topic.imageUrl ?? null,
     imageAltText: topic.imageAltText ?? null,
     authorName: topic.authorName,
-    authorEmail: topic.authorEmail ?? null,
+    authorEmail: null,
     published: Boolean(topic.published),
     createdAt: new Date(topic.createdAt).toISOString(),
     updatedAt: new Date(topic.updatedAt).toISOString(),
@@ -300,11 +300,10 @@ export async function getCommunityStats(): Promise<CommunityStats> {
       prisma.forumTopic.count({ where: { published: true } }),
       prisma.forumReply.count(),
       prisma.user.findMany({
-        where: { name: { not: null } },
         take: 3,
         orderBy: { createdAt: "desc" },
         select: {
-          name: true,
+          nickname: true,
           role: true,
           createdAt: true,
         },
@@ -312,7 +311,7 @@ export async function getCommunityStats(): Promise<CommunityStats> {
     ]);
 
     const featuredMembers: CommunityMember[] = recentMembers.map((user, index) => ({
-      name: user.name ?? `Member ${index + 1}`,
+      name: user.nickname,
       role: user.role || "Community member",
       rep: 30 + (index + 1) * 20,
       badge: index === 0 ? "Active" : index === 1 ? "Contributor" : "Researcher",
@@ -417,7 +416,7 @@ export async function createForumTopic(input: {
       imageUrl: imageUrl ?? null,
       imageAltText: imageUrl ? imageAltText : null,
       authorName,
-      authorEmail: input.authorEmail?.trim() || null,
+      authorEmail: null,
       published: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -434,9 +433,9 @@ export async function updateForumTopic(input: {
   title?: string;
   content?: string;
   category?: string;
-  authorName?: string;
-  authorEmail?: string;
   editorEmail?: string;
+  editorName?: string;
+  isModerator?: boolean;
   excerpt?: string;
   imageUrl?: string | null;
   imageAltText?: string | null;
@@ -449,10 +448,9 @@ export async function updateForumTopic(input: {
   const nextImageUrl = sanitizeImageUrl(input.imageUrl);
   const nextImageAltText = input.imageAltText?.trim() || undefined;
   const editorEmail = input.editorEmail?.trim().toLowerCase() || undefined;
-  const authorEmail = input.authorEmail?.trim().toLowerCase() || undefined;
-  const authorName = input.authorName?.trim() || undefined;
+  const editorName = input.editorName?.trim() || undefined;
 
-  if (!slug || (!nextTitle && !nextContent && !nextCategory && !nextExcerpt && !authorName && !authorEmail)) {
+  if (!slug || (!nextTitle && !nextContent && !nextCategory && !nextExcerpt && input.imageUrl === undefined)) {
     return null;
   }
 
@@ -466,10 +464,13 @@ export async function updateForumTopic(input: {
       return null;
     }
 
-    const isAllowedByEmail = !!editorEmail && !!topic.authorEmail && editorEmail === topic.authorEmail.trim().toLowerCase();
-    const isAllowedByName = !!authorName && topic.authorName.trim().toLowerCase() === authorName.trim().toLowerCase();
-
-    if (!isAllowedByEmail && !isAllowedByName) {
+    if (!canManageForumEntry({
+      ownerEmail: topic.authorEmail,
+      ownerName: topic.authorName,
+      editorEmail,
+      editorName,
+      isModerator: input.isModerator,
+    })) {
       return null;
     }
 
@@ -482,8 +483,6 @@ export async function updateForumTopic(input: {
         excerpt: nextExcerpt ?? topic.excerpt ?? null,
         imageUrl: nextImageUrl ?? topic.imageUrl ?? null,
         imageAltText: nextImageUrl ? (nextImageAltText ?? topic.imageAltText ?? "Attached image") : null,
-        authorName: authorName ?? topic.authorName,
-        authorEmail: input.authorEmail?.trim() || topic.authorEmail || null,
       },
       include: { replies: { orderBy: { createdAt: "asc" } } },
     });
@@ -496,10 +495,13 @@ export async function updateForumTopic(input: {
       return null;
     }
 
-    const isAllowedByEmail = !!editorEmail && !!topic.authorEmail && editorEmail === topic.authorEmail.trim().toLowerCase();
-    const isAllowedByName = !!authorName && topic.authorName.trim().toLowerCase() === authorName.trim().toLowerCase();
-
-    if (!isAllowedByEmail && !isAllowedByName) {
+    if (!canManageForumEntry({
+      ownerEmail: topic.authorEmail,
+      ownerName: topic.authorName,
+      editorEmail,
+      editorName,
+      isModerator: input.isModerator,
+    })) {
       return null;
     }
 
@@ -511,8 +513,6 @@ export async function updateForumTopic(input: {
       excerpt: nextExcerpt ?? topic.excerpt ?? null,
       imageUrl: nextImageUrl ?? topic.imageUrl ?? null,
       imageAltText: nextImageUrl ? (nextImageAltText ?? topic.imageAltText ?? "Attached image") : null,
-      authorName: authorName ?? topic.authorName,
-      authorEmail: input.authorEmail?.trim() || topic.authorEmail || null,
       updatedAt: new Date().toISOString(),
     } satisfies ForumTopic;
 
@@ -527,14 +527,13 @@ export async function updateForumTopic(input: {
 
 export async function deleteForumTopic(input: {
   slug: string;
-  authorEmail?: string;
   editorEmail?: string;
-  authorName?: string;
+  editorName?: string;
+  isModerator?: boolean;
 }) {
   const slug = input.slug.trim();
-  const authorEmail = input.authorEmail?.trim().toLowerCase();
   const editorEmail = input.editorEmail?.trim().toLowerCase();
-  const authorName = input.authorName?.trim();
+  const editorName = input.editorName?.trim();
 
   if (!slug) {
     return false;
@@ -549,10 +548,13 @@ export async function deleteForumTopic(input: {
       return false;
     }
 
-    const isAllowedByEmail = !!editorEmail && !!topic.authorEmail && editorEmail === topic.authorEmail.trim().toLowerCase();
-    const isAllowedByName = !!authorName && topic.authorName.trim().toLowerCase() === authorName.trim().toLowerCase();
-
-    if (!isAllowedByEmail && !isAllowedByName && !(authorEmail && topic.authorEmail && authorEmail === topic.authorEmail.trim().toLowerCase())) {
+    if (!canManageForumEntry({
+      ownerEmail: topic.authorEmail,
+      ownerName: topic.authorName,
+      editorEmail,
+      editorName,
+      isModerator: input.isModerator,
+    })) {
       return false;
     }
 
@@ -567,11 +569,13 @@ export async function deleteForumTopic(input: {
     }
 
     const target = fallbackTopics[index];
-    const isAllowedByEmail = !!editorEmail && !!target.authorEmail && editorEmail === target.authorEmail.trim().toLowerCase();
-    const isAllowedByName = !!authorName && target.authorName.trim().toLowerCase() === authorName.trim().toLowerCase();
-    const isAllowedByAuthorEmail = !!authorEmail && !!target.authorEmail && authorEmail === target.authorEmail.trim().toLowerCase();
-
-    if (!isAllowedByEmail && !isAllowedByName && !isAllowedByAuthorEmail) {
+    if (!canManageForumEntry({
+      ownerEmail: target.authorEmail,
+      ownerName: target.authorName,
+      editorEmail,
+      editorName,
+      isModerator: input.isModerator,
+    })) {
       return false;
     }
 
@@ -785,7 +789,7 @@ export async function createForumReply(input: {
       id: `fallback-reply-${Date.now()}`,
       topicId: topic.id,
       authorName,
-      authorEmail: input.authorEmail?.trim() || null,
+      authorEmail: null,
       content,
       imageUrl: imageUrl ?? null,
       imageAltText: imageUrl ? imageAltText : null,

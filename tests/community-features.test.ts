@@ -50,11 +50,45 @@ describe("community features", () => {
 
   it("supports a public registration flow for forum users", () => {
     const registerPath = path.resolve(__dirname, "../app/register/page.tsx");
+    const registerFormPath = path.resolve(__dirname, "../components/auth/public-register-form.tsx");
+    const registerRoutePath = path.resolve(__dirname, "../app/api/register/route.ts");
     expect(existsSync(registerPath)).toBe(true);
 
     const content = readFileSync(registerPath, "utf8");
+    const formContent = readFileSync(registerFormPath, "utf8");
+    const routeContent = readFileSync(registerRoutePath, "utf8");
     expect(content).toContain("Create account");
     expect(content).toContain("register");
+    expect(formContent).toContain("Public nickname");
+    expect(formContent).toContain("checkNicknameAvailability");
+    expect(routeContent).toContain("findUserByNickname");
+    expect(routeContent).toContain("AccountConflictError");
+  });
+
+  it("stores one unique normalized nickname per user", () => {
+    const schemaPath = path.resolve(__dirname, "../prisma/schema.prisma");
+    const migrationPath = path.resolve(__dirname, "../prisma/migrations/20260821090000_add_unique_user_nickname/migration.sql");
+    const schema = readFileSync(schemaPath, "utf8");
+    const migration = readFileSync(migrationPath, "utf8");
+
+    expect(schema).toContain("nickname              String    @unique");
+    expect(migration).toContain('CREATE UNIQUE INDEX "User_nickname_key"');
+    expect(migration).toContain('"nickname" = LOWER("nickname")');
+  });
+
+  it("uses nicknames publicly and redacts forum ownership emails", () => {
+    const forumRoutePath = path.resolve(__dirname, "../app/api/forum/route.ts");
+    const threadRoutePath = path.resolve(__dirname, "../app/api/forum/[slug]/route.ts");
+    const storePath = path.resolve(__dirname, "../lib/community-store.ts");
+    const forumRoute = readFileSync(forumRoutePath, "utf8");
+    const threadRoute = readFileSync(threadRoutePath, "utf8");
+    const store = readFileSync(storePath, "utf8");
+
+    expect(forumRoute).toContain("await auth()");
+    expect(forumRoute).toContain("session.user.nickname");
+    expect(threadRoute).toContain("session.user.nickname");
+    expect(store).toContain("authorEmail: null");
+    expect(store).toContain("nickname: true");
   });
 
   it("supports email verification before login", () => {
@@ -137,7 +171,8 @@ describe("community features", () => {
     const content = readFileSync(routePath, "utf8");
     expect(content).toContain("DELETE");
     expect(content).toContain("deleteForumTopic");
-    expect(content).toContain("authorEmail");
+    expect(content).toContain("await auth()");
+    expect(content).toContain("editorEmail: session.user.email");
   });
 
   it("allows an author to edit or delete an answer", () => {

@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { auth } from "@/lib/auth";
 import { createForumTopic, getForumTopics } from "@/lib/community-store";
+import { getPrivateFallbackNickname } from "@/lib/nickname";
 
 const topicSchema = z.object({
   title: z.string().trim().min(3, "A title is required."),
   content: z.string().trim().min(10, "Please add a little more context to the discussion."),
-  authorName: z.string().trim().min(2, "Your name is required."),
-  authorEmail: z.string().trim().email("Please provide a valid email address.").optional().or(z.literal("")),
   category: z.string().trim().max(60).optional().or(z.literal("")),
   tags: z.array(z.string().trim().min(1)).max(5).optional(),
   excerpt: z.string().trim().max(250).optional().or(z.literal("")),
@@ -28,6 +28,12 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const session = await auth();
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Please log in to publish a question." }, { status: 401 });
+    }
+
     const body = await request.json();
     const rawTags = Array.isArray(body?.tags)
       ? body.tags
@@ -64,8 +70,8 @@ export async function POST(request: Request) {
     const topic = await createForumTopic({
       title: parsed.data.title,
       content: parsed.data.content,
-      authorName: parsed.data.authorName,
-      authorEmail: parsed.data.authorEmail || undefined,
+      authorName: session.user.nickname || getPrivateFallbackNickname(session.user.id),
+      authorEmail: session.user.email,
       category: parsed.data.category || undefined,
       tags: parsed.data.tags,
       excerpt: parsed.data.excerpt || undefined,

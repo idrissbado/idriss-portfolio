@@ -6,6 +6,7 @@ import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { getPrivateFallbackNickname } from "@/lib/nickname";
 
 function getInitials(name: string) {
   return name
@@ -74,7 +75,7 @@ export function ForumAccountControl({ tone = "dark" }: { tone?: "dark" | "light"
     );
   }
 
-  const memberName = session.user.name || session.user.email || "Member";
+  const memberName = session.user.nickname || getPrivateFallbackNickname(session.user.id);
 
   return (
     <div

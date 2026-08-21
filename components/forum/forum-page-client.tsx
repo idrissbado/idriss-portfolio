@@ -47,7 +47,7 @@ export function ForumPageClient({
   initialStats?: CommunityStats;
 }) {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const [topics, setTopics] = useState(initialTopics);
   const [form, setForm] = useState(defaultForm);
   const [search, setSearch] = useState("");
@@ -221,8 +221,6 @@ export function ForumPageClient({
           ...form,
           category: primaryCategory,
           tags: normalizedTags,
-          authorName: session?.user?.name || "Community member",
-          authorEmail: session?.user?.email || undefined,
           imageUrl: form.imageUrl || undefined,
           imageAltText: form.imageAltText || undefined,
         }),
