@@ -1,4 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { MathRenderer } from "@/components/math/math-renderer";
 import { normalizeLatexDelimiters } from "@/lib/latex";
@@ -45,6 +47,16 @@ $$`;
     expect(html).toContain("class=\"katex\"");
     expect(html).toContain("class=\"katex-display\"");
     expect(html).toContain("math-content");
+  });
+
+  it("keeps stacked inline fractions visible below the fraction bar", () => {
+    const html = renderToStaticMarkup(<MathRenderer content={String.raw`If $x+\frac{1}{x}$ is an integer.`} />);
+    const css = readFileSync(path.resolve(__dirname, "../app/globals.css"), "utf8");
+
+    expect(html).toContain("mfrac");
+    expect(html).toContain("frac-line");
+    expect(css).toMatch(/\.math-inline\s*>\s*\.katex\s*\{[^}]*overflow:\s*visible;/);
+    expect(css).not.toMatch(/\.math-inline\s*>\s*\.katex\s*\{[^}]*overflow-y:\s*hidden;/);
   });
 
   it("renders LaTeX titles inline without a paragraph wrapper", () => {

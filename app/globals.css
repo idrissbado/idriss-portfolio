@@ -181,10 +181,9 @@ aside {
 
 .math-content :not(.katex-display) > .katex,
 .math-inline > .katex {
-  max-width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  vertical-align: -0.15em;
+  /* Keep KaTeX's full vertical box visible so stacked fractions are never clipped. */
+  overflow: visible;
+  vertical-align: baseline;
 }
 
 .math-content > :first-child {
