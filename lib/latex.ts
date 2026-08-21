@@ -78,6 +78,87 @@ function wrapLatexEnvironments(content: string) {
   });
 }
 
+function normalizeDisplayDollarDelimiters(content: string) {
+  let result = "";
+  let inlineCodeTicks = 0;
+  let displayMathOpen = false;
+
+  for (let index = 0; index < content.length;) {
+    if (content[index] === "\n") {
+      result += content[index];
+      inlineCodeTicks = 0;
+      index += 1;
+      continue;
+    }
+
+    if (content[index] === "`") {
+      let tickCount = 1;
+      while (content[index + tickCount] === "`") {
+        tickCount += 1;
+      }
+
+      if (inlineCodeTicks === 0) {
+        inlineCodeTicks = tickCount;
+      } else if (inlineCodeTicks === tickCount) {
+        inlineCodeTicks = 0;
+      }
+
+      result += "`".repeat(tickCount);
+      index += tickCount;
+      continue;
+    }
+
+    const isDisplayDelimiter =
+      inlineCodeTicks === 0 &&
+      content[index] === "$" &&
+      content[index + 1] === "$" &&
+      !isEscaped(content, index);
+
+    if (!isDisplayDelimiter) {
+      result += content[index];
+      index += 1;
+      continue;
+    }
+
+    const lineStart = content.lastIndexOf("\n", index - 1) + 1;
+    const nextLineBreak = content.indexOf("\n", index + 2);
+    const lineEnd = nextLineBreak === -1 ? content.length : nextLineBreak;
+    const isOnOwnLine =
+      content.slice(lineStart, index).trim() === "" &&
+      content.slice(index + 2, lineEnd).trim() === "";
+
+    if (isOnOwnLine) {
+      result += "$$";
+      displayMathOpen = !displayMathOpen;
+      index += 2;
+      continue;
+    }
+
+    result = result.replace(/[ \t]+$/, "");
+
+    if (displayMathOpen) {
+      if (!result.endsWith("\n")) {
+        result += "\n";
+      }
+      result += "$$\n\n";
+    } else {
+      if (result.length > 0 && !result.endsWith("\n\n")) {
+        result += result.endsWith("\n") ? "\n" : "\n\n";
+      }
+      result += "$$\n";
+    }
+
+    displayMathOpen = !displayMathOpen;
+    index += 2;
+
+    while (content[index] === " " || content[index] === "\t") {
+      index += 1;
+    }
+  }
+
+  return result;
+}
+
 function normalizeOutsideFencedCode(content: string) {
   const parts = content.split(/(?<=\n)/);
   let activeFence: { marker: string; length: number } | null = null;
@@ -85,7 +166,7 @@ function normalizeOutsideFencedCode(content: string) {
   let result = "";
 
   const flushPendingText = () => {
-    result += wrapLatexEnvironments(pendingText);
+    result += wrapLatexEnvironments(normalizeDisplayDollarDelimiters(pendingText));
     pendingText = "";
   };
 

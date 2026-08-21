@@ -39,6 +39,18 @@ $$`;
     expect(normalizeLatexDelimiters(latex)).toBe(latex);
   });
 
+  it("promotes double-dollar formulas written inside prose to display math", () => {
+    const content = String.raw`If $x+\frac{1}{x}$ is an integer, prove that $$ x^{6n+1}+\frac{1}{x^{6n+1}} $$ and $$ x^{6n-1}+\frac{1}{x^{6n-1}} $$ have the same units digit.`;
+    const normalized = normalizeLatexDelimiters(content);
+    const html = renderToStaticMarkup(<MathRenderer content={content} />);
+
+    expect(normalized).toContain("prove that\n\n$$\n");
+    expect(normalized).toContain("\n$$\n\nand\n\n$$\n");
+    expect(html.match(/katex-display/g)).toHaveLength(2);
+    expect(html).toContain("mfrac");
+    expect(html).not.toContain("katex-error");
+  });
+
   it("renders inline and display equations with KaTeX", () => {
     const html = renderToStaticMarkup(
       <MathRenderer content={"Inline \\(x^2\\)\n\n\\[\\sum_{n=1}^{\\infty} n^{-2}\\]"} />,
