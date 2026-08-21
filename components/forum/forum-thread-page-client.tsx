@@ -455,7 +455,7 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
           </div>
         </article>
 
-        <section className="mt-8 rounded-[28px] border border-stone-200 bg-white/85 p-6 shadow-[0_18px_35px_rgba(15,23,42,0.04)] backdrop-blur-sm dark:border-stone-800 dark:bg-stone-900/85">
+        <section id="answer-composer" className="mt-8 scroll-mt-24 rounded-[28px] border border-stone-200 bg-white/85 p-6 shadow-[0_18px_35px_rgba(15,23,42,0.04)] backdrop-blur-sm dark:border-stone-800 dark:bg-stone-900/85">
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-2xl font-semibold text-stone-900 dark:text-stone-50">Replies</h2>
             <div className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-medium uppercase tracking-[0.18em] text-stone-600 dark:border-stone-700 dark:bg-stone-950/60 dark:text-stone-300">

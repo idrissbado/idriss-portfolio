@@ -1,21 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { MathRenderer } from "@/components/math/math-renderer";
 import type { CommunityStats, ForumTopic } from "@/lib/community-store";
 
 const defaultForm = {
   title: "",
-  authorName: "",
-  authorEmail: "",
   category: "General",
   tags: "",
   content: "",
   imageUrl: "",
   imageAltText: "",
 };
+
+const formattingTools = [
+  { label: "B", ariaLabel: "Bold", before: "**", after: "**", placeholder: "bold text" },
+  { label: "I", ariaLabel: "Italic", before: "*", after: "*", placeholder: "italic text" },
+  { label: "🔗", ariaLabel: "Link", before: "[", after: "](", placeholder: "link text" },
+  { label: "📷", ariaLabel: "Image", before: "![", after: "]()", placeholder: "image alt text" },
+  { label: "•", ariaLabel: "List", before: "\n- ", after: "", placeholder: "list item" },
+  { label: "❝", ariaLabel: "Blockquote", before: "\n> ", after: "", placeholder: "quoted text" },
+  { label: "</>", ariaLabel: "Code block", before: "\n```\n", after: "\n```", placeholder: "code" },
+  { label: "$", ariaLabel: "Inline equation", before: "$", after: "$", placeholder: "x^2" },
+] as const;
 
 function getInitials(name: string) {
   return name
@@ -33,6 +43,7 @@ export function ForumPageClient({
   initialTopics: ForumTopic[];
   initialStats?: CommunityStats;
 }) {
+  const router = useRouter();
   const { data: session, status } = useSession();
   const [topics, setTopics] = useState(initialTopics);
   const [form, setForm] = useState(defaultForm);
@@ -49,18 +60,6 @@ export function ForumPageClient({
     type: "idle",
     message: "",
   });
-
-  useEffect(() => {
-    if (!session?.user) {
-      return;
-    }
-
-    setForm((current) => ({
-      ...current,
-      authorName: current.authorName || String(session.user?.name ?? ""),
-      authorEmail: current.authorEmail || String(session.user?.email ?? ""),
-    }));
-  }, [session]);
 
   const isAuthenticated = status === "authenticated";
   const navItems = [
@@ -219,8 +218,8 @@ export function ForumPageClient({
           ...form,
           category: primaryCategory,
           tags: normalizedTags,
-          authorName: form.authorName || session?.user?.name || "Community member",
-          authorEmail: form.authorEmail || session?.user?.email || undefined,
+          authorName: session?.user?.name || "Community member",
+          authorEmail: session?.user?.email || undefined,
           imageUrl: form.imageUrl || undefined,
           imageAltText: form.imageAltText || undefined,
         }),
@@ -234,6 +233,11 @@ export function ForumPageClient({
 
       if (payload.topic) {
         setTopics((current) => [payload.topic!, ...current]);
+        setForm(defaultForm);
+        setShowComposer(false);
+        setStatusMessage({ type: "success", message: "Your question has been published." });
+        router.push(`/forum/${payload.topic.slug}#answer-composer`);
+        return;
       }
 
       setForm(defaultForm);
@@ -302,8 +306,18 @@ export function ForumPageClient({
     }
 
     setShowComposer(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.requestAnimationFrame(() => {
+      document.getElementById("question-composer")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   };
+
+  const clearQuestionFilters = () => {
+    setSearch("");
+    setSelectedTag("all");
+    setActiveNav("questions");
+  };
+
+  const hasActiveQuestionFilters = Boolean(search.trim() || selectedTag !== "all" || activeNav === "unanswered");
 
   return (
     <div className="forum-shell min-h-screen bg-[radial-gradient(circle_at_top,_rgba(191,219,254,0.28),_rgba(255,255,255,0)_30%),linear-gradient(180deg,_#f8f6f3_0%,_#f2efe9_100%)] text-stone-900">
@@ -558,23 +572,13 @@ export function ForumPageClient({
                     <div className="mt-3 overflow-hidden rounded-[6px] border border-[#d6d9dc] bg-white shadow-sm dark:border-stone-700 dark:bg-stone-950">
                       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e3e6e8] bg-[#f1f2f3] px-3 py-2 dark:border-stone-700 dark:bg-stone-900/80">
                         <div className="flex flex-wrap items-center gap-2 text-base text-stone-700 dark:text-stone-200">
-                          {[
-                            { label: "B", action: () => insertSnippet("**", "**", "bold text") },
-                            { label: "I", action: () => insertSnippet("*", "*", "italic text") },
-                            { label: "🔗", action: () => insertSnippet("[", "](") },
-                            { label: "📷", action: () => insertSnippet("![", "]()", "image alt text") },
-                            { label: "•", action: () => insertSnippet("\n- ", "", "list item") },
-                            { label: "❝", action: () => insertSnippet("\n> ", "", "quoted text") },
-                            { label: "</>", action: () => insertSnippet("\n```\n", "\n```", "code") },
-                            { label: "$", action: () => insertSnippet("$", "$", "x^2") },
-                            { label: "↶", action: () => insertSnippet("", "", "") },
-                          ].map((tool, index) => (
+                          {formattingTools.map((tool) => (
                             <button
-                              key={`${tool.label}-${index}`}
+                              key={tool.ariaLabel}
                               type="button"
-                              onClick={tool.action}
+                              onClick={() => insertSnippet(tool.before, tool.after, tool.placeholder)}
                               className="flex h-8 w-8 items-center justify-center rounded-[4px] border border-[#d6d9dc] bg-white text-sm font-semibold text-stone-700 transition hover:border-stone-500 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200"
-                              aria-label={tool.label === "B" ? "Bold" : tool.label === "I" ? "Italic" : "Formatting tool"}
+                              aria-label={tool.ariaLabel}
                             >
                               {tool.label}
                             </button>
@@ -776,13 +780,22 @@ export function ForumPageClient({
                       </Link>
                     </div>
                   ) : (
-                    <div className="mt-5 flex justify-center">
+                    <div className="mt-5 flex flex-wrap justify-center gap-3">
+                      {hasActiveQuestionFilters ? (
+                        <button
+                          type="button"
+                          onClick={clearQuestionFilters}
+                          className="rounded-full border border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 hover:border-stone-500 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200"
+                        >
+                          Show all questions
+                        </button>
+                      ) : null}
                       <button
                         type="button"
-                        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                        onClick={openComposer}
                         className="rounded-full bg-stone-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-stone-700 dark:bg-stone-100 dark:text-stone-900"
                       >
-                        Publish a question
+                        Ask a new question
                       </button>
                     </div>
                   )}
@@ -826,16 +839,24 @@ export function ForumPageClient({
                           ))}
                         </div>
 
-                        <div className="flex items-center gap-3 text-sm text-stone-600 dark:text-stone-300">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-stone-800 to-stone-500 text-[10px] font-semibold uppercase text-white dark:from-stone-100 dark:to-stone-400 dark:text-stone-950">
-                            {getInitials(topic.authorName || "Member")}
-                          </div>
-                          <div>
-                            <div className="font-medium text-stone-800 dark:text-stone-100">{topic.authorName}</div>
-                            <div className="text-[11px] text-stone-500 dark:text-stone-400">
-                              {new Date(topic.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        <div className="flex flex-wrap items-center justify-end gap-3">
+                          <div className="flex items-center gap-3 text-sm text-stone-600 dark:text-stone-300">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-stone-800 to-stone-500 text-[10px] font-semibold uppercase text-white dark:from-stone-100 dark:to-stone-400 dark:text-stone-950">
+                              {getInitials(topic.authorName || "Member")}
+                            </div>
+                            <div>
+                              <div className="font-medium text-stone-800 dark:text-stone-100">{topic.authorName}</div>
+                              <div className="text-[11px] text-stone-500 dark:text-stone-400">
+                                {new Date(topic.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                              </div>
                             </div>
                           </div>
+                          <Link
+                            href={`/forum/${topic.slug}#answer-composer`}
+                            className="inline-flex items-center justify-center rounded-full bg-stone-900 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-stone-700 dark:bg-stone-100 dark:text-stone-900"
+                          >
+                            View &amp; answer →
+                          </Link>
                         </div>
                       </div>
                     </article>

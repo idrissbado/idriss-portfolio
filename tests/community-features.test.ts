@@ -128,6 +128,17 @@ describe("community features", () => {
     expect(content).toContain("await auth()");
     expect(threadContent).toContain("MathComposer");
     expect(threadContent).toContain("Edit answer");
+    expect(threadContent).toContain('id="answer-composer"');
+  });
+
+  it("links question cards directly to the answer composer", () => {
+    const forumClientPath = path.resolve(__dirname, "../components/forum/forum-page-client.tsx");
+    const content = readFileSync(forumClientPath, "utf8");
+
+    expect(content).toContain("View &amp; answer");
+    expect(content).toContain("#answer-composer");
+    expect(content).toContain("clearQuestionFilters");
+    expect(content).toContain("onClick={openComposer}");
   });
 
   it("exposes the subscriber API endpoint", () => {
