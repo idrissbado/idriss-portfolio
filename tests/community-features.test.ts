@@ -22,6 +22,32 @@ describe("community features", () => {
     expect(content).toContain("Create account");
   });
 
+  it("turns the login page into a signed-in account portal", () => {
+    const loginFormPath = path.resolve(__dirname, "../components/auth/public-login-form.tsx");
+    const pagePath = path.resolve(__dirname, "../app/login/page.tsx");
+    const loginForm = readFileSync(loginFormPath, "utf8");
+    const page = readFileSync(pagePath, "utf8");
+
+    expect(loginForm).toContain("useSession");
+    expect(loginForm).toContain("Signed in securely");
+    expect(loginForm).toContain("Log out securely");
+    expect(page).not.toContain("redirect(");
+  });
+
+  it("lets members log out directly from the forum without redirecting", () => {
+    const accountControlPath = path.resolve(__dirname, "../components/forum/forum-account-control.tsx");
+    const forumClientPath = path.resolve(__dirname, "../components/forum/forum-page-client.tsx");
+    const threadClientPath = path.resolve(__dirname, "../components/forum/forum-thread-page-client.tsx");
+    const accountControl = readFileSync(accountControlPath, "utf8");
+    const forumClient = readFileSync(forumClientPath, "utf8");
+    const threadClient = readFileSync(threadClientPath, "utf8");
+
+    expect(accountControl).toContain("signOut({ redirect: false })");
+    expect(accountControl).toContain("Log out");
+    expect(forumClient).toContain("ForumAccountControl");
+    expect(threadClient).toContain("ForumAccountControl");
+  });
+
   it("supports a public registration flow for forum users", () => {
     const registerPath = path.resolve(__dirname, "../app/register/page.tsx");
     expect(existsSync(registerPath)).toBe(true);
@@ -136,6 +162,8 @@ describe("community features", () => {
     const content = readFileSync(forumClientPath, "utf8");
 
     expect(content).toContain("View &amp; answer");
+    expect(content).toContain("from-blue-700");
+    expect(content).toContain("<ArrowRight");
     expect(content).toContain("#answer-composer");
     expect(content).toContain("clearQuestionFilters");
     expect(content).toContain("onClick={openComposer}");

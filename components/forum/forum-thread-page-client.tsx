@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
+import { ForumAccountControl } from "@/components/forum/forum-account-control";
 import { MathComposer } from "@/components/math/math-composer";
 import { MathRenderer } from "@/components/math/math-renderer";
 import type { ForumReplyRecord, ForumTopic } from "@/lib/community-store";
@@ -315,9 +316,7 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
           <Link href="/forum" className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-2 text-sm font-medium text-stone-700 transition hover:border-stone-400 hover:text-stone-950 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:hover:text-white">
             ← Back to forum
           </Link>
-          <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
-            Member-only
-          </div>
+          <ForumAccountControl tone="light" />
         </div>
 
         {statusMessage.message ? (

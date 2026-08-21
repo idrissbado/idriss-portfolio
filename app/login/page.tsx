@@ -1,6 +1,4 @@
-import { redirect } from "next/navigation";
 import { PublicLoginForm } from "@/components/auth/public-login-form";
-import { auth } from "@/lib/auth";
 
 const loginAction = "signIn";
 const loginPrompt = "Create account";
@@ -10,12 +8,6 @@ export default async function LoginPage({
 }: {
   searchParams?: Promise<{ verified?: string; registered?: string; error?: string }> | { verified?: string; registered?: string; error?: string };
 }) {
-  const session = await auth();
-
-  if (session) {
-    redirect(session.user?.role === "admin" ? "/admin" : "/forum");
-  }
-
   const params = searchParams ? await Promise.resolve(searchParams) : {};
   const verified = params.verified === "1";
   const registered = params.registered === "1";

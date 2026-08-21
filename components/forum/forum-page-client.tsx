@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { useSession } from "next-auth/react";
+import { ForumAccountControl } from "@/components/forum/forum-account-control";
 import { MathRenderer } from "@/components/math/math-renderer";
 import type { CommunityStats, ForumTopic } from "@/lib/community-store";
 
@@ -346,20 +348,7 @@ export function ForumPageClient({
                 />
               </label>
 
-              {!isAuthenticated ? (
-                <div className="flex items-center gap-2">
-                  <Link href="/login" className="rounded-full border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/10">
-                    Log in
-                  </Link>
-                  <Link href="/register" className="rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-cyan-500/20 transition hover:brightness-110">
-                    Sign up
-                  </Link>
-                </div>
-              ) : (
-                <div className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200">
-                  Member access
-                </div>
-              )}
+              <ForumAccountControl tone="dark" />
             </div>
           </div>
         </header>
@@ -853,9 +842,10 @@ export function ForumPageClient({
                           </div>
                           <Link
                             href={`/forum/${topic.slug}#answer-composer`}
-                            className="inline-flex items-center justify-center rounded-full bg-stone-900 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-stone-700 dark:bg-stone-100 dark:text-stone-900"
+                            className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-700 to-cyan-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-900/20 transition hover:from-blue-600 hover:to-cyan-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 dark:from-blue-500 dark:to-cyan-500 dark:text-white dark:hover:from-blue-400 dark:hover:to-cyan-400"
                           >
-                            View &amp; answer →
+                            View &amp; answer
+                            <ArrowRight className="h-4 w-4" aria-hidden="true" />
                           </Link>
                         </div>
                       </div>
