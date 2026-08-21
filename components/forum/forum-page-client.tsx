@@ -27,6 +27,7 @@ const formattingTools = [
   { label: "❝", ariaLabel: "Blockquote", before: "\n> ", after: "", placeholder: "quoted text" },
   { label: "</>", ariaLabel: "Code block", before: "\n```\n", after: "\n```", placeholder: "code" },
   { label: "$", ariaLabel: "Inline equation", before: "$", after: "$", placeholder: "x^2" },
+  { label: "∫", ariaLabel: "Display equation", before: "\n$$\n", after: "\n$$", placeholder: "\\int_0^1 f(x)\\,dx" },
 ] as const;
 
 function getInitials(name: string) {
@@ -539,7 +540,7 @@ export function ForumPageClient({
                       Title<span className="ml-1 text-red-500">*</span>
                     </label>
                     <p className="mt-2 text-[15px] leading-6 text-stone-600 dark:text-stone-300">
-                      Be specific and imagine you&apos;re asking another person
+                      Be specific. Inline LaTeX such as <code>$x^2$</code> is supported in the title.
                     </p>
                     <input
                       value={form.title}
@@ -548,6 +549,12 @@ export function ForumPageClient({
                       placeholder="What&apos;s your math question? Be specific."
                       required
                     />
+                    {form.title.trim() ? (
+                      <div className="mt-3 rounded-[6px] border border-[#e3e6e8] bg-white px-3 py-2.5 text-base font-semibold text-stone-900 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-50">
+                        <span className="mr-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-stone-500 dark:text-stone-400">Preview</span>
+                        <MathRenderer content={form.title} variant="inline" />
+                      </div>
+                    ) : null}
                   </div>
 
                   <div>
@@ -595,7 +602,7 @@ export function ForumPageClient({
                         value={form.content}
                         onChange={(event) => setForm((current) => ({ ...current, content: event.target.value }))}
                         className="min-h-[220px] w-full resize-y border-0 bg-transparent px-4 py-4 text-base text-stone-900 outline-none placeholder:text-stone-500 dark:text-stone-50"
-                        placeholder="Write your full question here. You can use LaTeX such as $\frac{a}{b}$ or $$\sum_{n=1}^{\infty} \frac{1}{n^2}$$."
+                        placeholder={"Write your full question here. Use $...$ for inline math. For a separate equation, put $$ on lines above and below it."}
                         required
                       />
                     </div>
@@ -805,11 +812,14 @@ export function ForumPageClient({
                           </div>
 
                           <Link href={`/forum/${topic.slug}`} className="mt-3 block text-xl font-semibold leading-snug text-stone-900 transition hover:text-stone-700 dark:text-stone-50 dark:hover:text-stone-200 sm:text-[1.55rem]">
-                            {topic.title}
+                            <MathRenderer content={topic.title} variant="inline" />
                           </Link>
 
                           <div className="mt-3 text-sm leading-6 text-stone-600 dark:text-stone-300">
-                            <MathRenderer content={topic.excerpt ?? `${topic.content.slice(0, 180)}${topic.content.length > 180 ? "..." : ""}`} />
+                            <MathRenderer
+                              content={topic.excerpt ?? `${topic.content.slice(0, 180)}${topic.content.length > 180 ? "..." : ""}`}
+                              variant="compact"
+                            />
                           </div>
                         </div>
 
@@ -865,7 +875,9 @@ export function ForumPageClient({
                     hotQuestions.map((question) => (
                       <div key={question} className="flex gap-3 rounded-2xl border border-stone-200 bg-stone-50 p-3 text-sm text-stone-700 dark:border-stone-800 dark:bg-stone-950/60 dark:text-stone-200">
                         <span className="mt-1 text-base text-stone-400">◉</span>
-                        <p className="leading-6">{question}</p>
+                        <p className="min-w-0 leading-6">
+                          <MathRenderer content={question} variant="inline" />
+                        </p>
                       </div>
                     ))
                   ) : (

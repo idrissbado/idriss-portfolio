@@ -5,6 +5,122 @@ const LATEX_DELIMITERS: Record<string, string> = {
   "]": "\n$$\n",
 };
 
+const DISPLAY_ENVIRONMENT_PATTERN = /\\begin\{(equation\*?|align\*?|gather\*?|aligned|alignedat|gathered|cases|matrix|pmatrix|bmatrix|Bmatrix|vmatrix|Vmatrix|smallmatrix|array)\}[\s\S]*?\\end\{\1\}/g;
+
+function isEscaped(content: string, index: number) {
+  let slashCount = 0;
+
+  for (let cursor = index - 1; cursor >= 0 && content[cursor] === "\\"; cursor -= 1) {
+    slashCount += 1;
+  }
+
+  return slashCount % 2 === 1;
+}
+
+function isInsideInlineCode(content: string, index: number) {
+  const lineStart = content.lastIndexOf("\n", index - 1) + 1;
+  let activeTicks = 0;
+
+  for (let cursor = lineStart; cursor < index;) {
+    if (content[cursor] !== "`") {
+      cursor += 1;
+      continue;
+    }
+
+    let tickCount = 1;
+    while (content[cursor + tickCount] === "`") {
+      tickCount += 1;
+    }
+
+    if (activeTicks === 0) {
+      activeTicks = tickCount;
+    } else if (activeTicks === tickCount) {
+      activeTicks = 0;
+    }
+
+    cursor += tickCount;
+  }
+
+  return activeTicks > 0;
+}
+
+function isInsideDollarMath(content: string, index: number) {
+  let mode: "inline" | "display" | null = null;
+
+  for (let cursor = 0; cursor < index;) {
+    if (content[cursor] !== "$" || isEscaped(content, cursor)) {
+      cursor += 1;
+      continue;
+    }
+
+    const delimiter = content[cursor + 1] === "$" ? "display" : "inline";
+    const delimiterLength = delimiter === "display" ? 2 : 1;
+
+    if (mode === null) {
+      mode = delimiter;
+    } else if (mode === delimiter) {
+      mode = null;
+    }
+
+    cursor += delimiterLength;
+  }
+
+  return mode !== null;
+}
+
+function wrapLatexEnvironments(content: string) {
+  return content.replace(DISPLAY_ENVIRONMENT_PATTERN, (match, _environment: string, offset: number) => {
+    if (isEscaped(content, offset) || isInsideInlineCode(content, offset) || isInsideDollarMath(content, offset)) {
+      return match;
+    }
+
+    return `\n\n$$\n${match.trim()}\n$$\n\n`;
+  });
+}
+
+function normalizeOutsideFencedCode(content: string) {
+  const parts = content.split(/(?<=\n)/);
+  let activeFence: { marker: string; length: number } | null = null;
+  let pendingText = "";
+  let result = "";
+
+  const flushPendingText = () => {
+    result += wrapLatexEnvironments(pendingText);
+    pendingText = "";
+  };
+
+  for (const part of parts) {
+    const fenceMatch = part.match(/^\s*(`{3,}|~{3,})/);
+
+    if (!fenceMatch) {
+      if (activeFence) {
+        result += part;
+      } else {
+        pendingText += part;
+      }
+      continue;
+    }
+
+    const fence = fenceMatch[1];
+    const marker = fence[0];
+
+    if (!activeFence) {
+      flushPendingText();
+      activeFence = { marker, length: fence.length };
+      result += part;
+      continue;
+    }
+
+    result += part;
+    if (activeFence.marker === marker && fence.length >= activeFence.length) {
+      activeFence = null;
+    }
+  }
+
+  flushPendingText();
+  return result;
+}
+
 function normalizeLine(line: string) {
   let result = "";
   let inlineCodeTicks = 0;
@@ -63,7 +179,7 @@ function normalizeLine(line: string) {
 export function normalizeLatexDelimiters(content: string) {
   let activeFence: { marker: string; length: number } | null = null;
 
-  return content
+  const normalizedDelimiters = content
     .split(/(\r?\n)/)
     .map((part) => {
       if (part === "\n" || part === "\r\n") {
@@ -88,4 +204,6 @@ export function normalizeLatexDelimiters(content: string) {
       return activeFence ? part : normalizeLine(part);
     })
     .join("");
+
+  return normalizeOutsideFencedCode(normalizedDelimiters);
 }

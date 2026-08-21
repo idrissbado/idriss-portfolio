@@ -168,6 +168,25 @@ aside {
   overflow-wrap: anywhere;
 }
 
+.math-inline {
+  min-width: 0;
+}
+
+.math-content .katex,
+.math-inline .katex {
+  overflow-wrap: normal;
+  word-break: normal;
+  white-space: nowrap;
+}
+
+.math-content :not(.katex-display) > .katex,
+.math-inline > .katex {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  vertical-align: -0.15em;
+}
+
 .math-content > :first-child {
   margin-top: 0;
 }
@@ -274,12 +293,35 @@ aside {
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
+  overscroll-behavior-inline: contain;
   padding: 0.45rem 0.15rem;
+  scrollbar-width: thin;
+}
+
+.math-content-compact p,
+.math-content-compact ul,
+.math-content-compact ol,
+.math-content-compact blockquote,
+.math-content-compact pre,
+.math-content-compact table,
+.math-content-compact .katex-display {
+  margin: 0.45rem 0;
+}
+
+.math-content-compact .katex-display {
+  padding-block: 0.2rem;
 }
 
 .math-content .katex-error {
   color: #be123c;
   white-space: pre-wrap;
+}
+
+.math-render-error {
+  color: #be123c;
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: 0.9em;
+  font-style: normal;
 }
 
 .math-editor-tool {

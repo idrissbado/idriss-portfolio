@@ -396,7 +396,7 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
               ) : (
                 <>
                   <h1 className="mt-4 text-3xl font-semibold tracking-tight text-stone-950 dark:text-stone-50 sm:text-4xl">
-                    {question.title}
+                    <MathRenderer content={question.title} variant="inline" />
                   </h1>
 
                   <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-stone-600 dark:text-stone-300">
