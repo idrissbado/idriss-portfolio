@@ -1,37 +1,77 @@
-import { renderToStaticMarkup } from "react-dom/server";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { MathRenderer } from "@/components/math/math-renderer";
 import { normalizeLatexDelimiters } from "@/lib/latex";
 
-describe("LaTeX rendering", () => {
-  it("normalizes parenthesis and bracket delimiters", () => {
+const REQUIRED_INLINE_CASES = [
+  String.raw`$x+\frac{1}{x}$`,
+  String.raw`$x^{6n+1}+\frac{1}{x^{6n+1}}$`,
+  String.raw`$x^{6n-1}+\frac{1}{x^{6n-1}}$`,
+  String.raw`$\frac{x^{n+1}+1}{x^{2n-1}}$`,
+  String.raw`$\frac{1}{x^{a+b+c}}$`,
+  String.raw`$\sqrt{\frac{x^{2}+1}{x^{2}-1}}$`,
+  String.raw`$\sum_{k=1}^{n}\frac{1}{k^2}$`,
+];
+
+const POWERED_DENOMINATORS = [
+  String.raw`x^{6n+1}+\frac{1}{x^{6n+1}}`,
+  String.raw`x^{6n-1}+\frac{1}{x^{6n-1}}`,
+  String.raw`x^{6n\pm1}+\frac{1}{x^{6n\pm1}}`,
+  String.raw`\frac{1}{x^{a+b+c}}`,
+];
+
+function renderMath(content: string, variant: "body" | "compact" | "inline" | "title" = "body") {
+  return renderToStaticMarkup(<MathRenderer content={content} variant={variant} />);
+}
+
+function firstMathMlFraction(html: string) {
+  const start = html.indexOf("<mfrac>");
+  const end = html.indexOf("</mfrac>", start);
+
+  expect(start).toBeGreaterThanOrEqual(0);
+  expect(end).toBeGreaterThan(start);
+  return html.slice(start, end + "</mfrac>".length);
+}
+
+describe("LaTeX delimiter normalization", () => {
+  it("supports parenthesis and bracket delimiters", () => {
     const normalized = normalizeLatexDelimiters("Inline \\(x^2\\)\n\n\\[x+y=z\\]");
 
     expect(normalized).toContain("Inline $x^2$");
     expect(normalized).toContain("$$\nx+y=z\n$$");
   });
 
-  it("does not alter LaTeX-looking delimiters inside code", () => {
+  it("copies the complete fraction payload without changing braces or commands", () => {
+    const expression = String.raw`x^{6n\pm1} + \frac{1}{x^{6n\pm1}}`;
+
+    expect(normalizeLatexDelimiters(`\\(${expression}\\)`)).toBe(`$${expression}$`);
+    expect(normalizeLatexDelimiters(`$$${expression}$$`, { inlineOnly: true })).toBe(`$${expression}$`);
+
+    const display = normalizeLatexDelimiters(`\\[${expression}\\]`);
+    expect(display).toContain(expression);
+    expect(display.match(/x\^\{6n\\pm1\}/g)).toHaveLength(2);
+  });
+
+  it("does not alter LaTeX-looking delimiters inside Markdown code", () => {
     const markdown = "`\\(inline example\\)`\n\n```tex\n\\[display example\\]\n\\begin{align}a&=b\\end{align}\n```";
 
     expect(normalizeLatexDelimiters(markdown)).toBe(markdown);
   });
 
-  it("turns standalone LaTeX environments into display math", () => {
+  it("turns standalone and nested LaTeX environments into display math", () => {
     const latex = String.raw`\begin{align*}
-      a&=b\\
+      A&=\begin{pmatrix}a&b\\c&d\end{pmatrix}\\
       c&=d
     \end{align*}`;
     const normalized = normalizeLatexDelimiters(latex);
 
     expect(normalized).toContain("$$");
-    expect(normalized).toContain("\\begin{align*}");
-    expect(normalized).toContain("\\end{align*}");
+    expect(normalized).toContain(latex);
   });
 
-  it("does not double-wrap environments that already use math delimiters", () => {
+  it("does not double-wrap environments already inside math delimiters", () => {
     const latex = String.raw`$$
 \begin{pmatrix}a&b\\c&d\end{pmatrix}
 $$`;
@@ -39,92 +79,120 @@ $$`;
     expect(normalizeLatexDelimiters(latex)).toBe(latex);
   });
 
-  it("promotes double-dollar formulas written inside prose to display math", () => {
-    const content = String.raw`If $x+\frac{1}{x}$ is an integer, prove that $$ x^{6n+1}+\frac{1}{x^{6n+1}} $$ and $$ x^{6n-1}+\frac{1}{x^{6n-1}} $$ have the same units digit.`;
+  it("promotes double-dollar formulas written inside prose without changing their payload", () => {
+    const first = String.raw` x^{6n+1}+\frac{1}{x^{6n+1}} `;
+    const second = String.raw` x^{6n-1}+\frac{1}{x^{6n-1}} `;
+    const content = `Prove that $$${first}$$ and $$${second}$$ have the same units digit.`;
     const normalized = normalizeLatexDelimiters(content);
-    const html = renderToStaticMarkup(<MathRenderer content={content} />);
+    const html = renderMath(content);
 
-    expect(normalized).toContain("prove that\n\n$$\n");
-    expect(normalized).toContain("\n$$\n\nand\n\n$$\n");
-    expect(html.match(/katex-display/g)).toHaveLength(2);
-    expect(html).toContain("mfrac");
+    expect(normalized).toContain(first);
+    expect(normalized).toContain(second);
+    expect(html.match(/class="katex-display"/g)).toHaveLength(2);
     expect(html).not.toContain("katex-error");
   });
+});
 
-  it("renders inline and display equations with KaTeX", () => {
-    const html = renderToStaticMarkup(
-      <MathRenderer content={"Inline \\(x^2\\)\n\n\\[\\sum_{n=1}^{\\infty} n^{-2}\\]"} />,
-    );
+describe("professional KaTeX rendering", () => {
+  it.each(REQUIRED_INLINE_CASES)("renders the regression formula %s", (source) => {
+    const html = renderMath(source);
 
     expect(html).toContain("class=\"katex\"");
-    expect(html).toContain("class=\"katex-display\"");
-    expect(html).toContain("math-content");
-  });
-
-  it("keeps stacked inline fractions visible below the fraction bar", () => {
-    const html = renderToStaticMarkup(<MathRenderer content={String.raw`If $x+\frac{1}{x}$ is an integer.`} />);
-    const css = readFileSync(path.resolve(__dirname, "../app/globals.css"), "utf8");
-    const inlineMathRule = css.match(
-      /\.math-content :not\(\.katex-display\) > \.katex,[^}]*\.math-inline > \.katex,[^}]*\{[^}]*\}/,
-    )?.[0] ?? "";
-
-    expect(html).toContain("mfrac");
+    expect(html).toContain("<mfrac>");
+    expect(html).toContain("class=\"mfrac\"");
     expect(html).toContain("frac-line");
-    expect(inlineMathRule).toContain("overflow: visible;");
-    expect(inlineMathRule).not.toContain("overflow-y: hidden;");
-  });
-
-  it("renders LaTeX titles inline without a paragraph wrapper", () => {
-    const html = renderToStaticMarkup(
-      <MathRenderer content={"How to prove $$x^{6n\\pm1}+\\frac{1}{x^{6n\\pm1}}$$?"} variant="title" />,
-    );
-    const css = readFileSync(path.resolve(__dirname, "../app/globals.css"), "utf8");
-
-    expect(html).toContain("math-title");
-    expect(html).toContain("class=\"katex\"");
-    expect(html).toContain("mfrac");
-    expect(html).not.toContain("katex-display");
-    expect(html).not.toContain("<p>");
-    expect(css).toMatch(/\.math-title\s*\{[^}]*line-height:\s*1\.8;/);
-  });
-
-  it("uses compact typography for forum excerpts with several equations", () => {
-    const excerpt = "If $x+\\frac{1}{x}$ is an integer, prove that $$x^{6n+1}+\\frac{1}{x^{6n+1}}$$ has the same units digit.";
-    const html = renderToStaticMarkup(<MathRenderer content={excerpt} variant="compact" />);
-
-    expect(html).toContain("math-content-compact");
-    expect(html).toContain("class=\"katex\"");
-    expect(html).not.toContain("katex-error");
-  });
-
-  it("renders professional LaTeX environments without exposing commands", () => {
-    const content = String.raw`
-\begin{equation}x^2+1=0\end{equation}
-
-\begin{align*}a&=b\\c&=d\end{align*}
-
-\begin{gather}u=v\\w=z\end{gather}
-
-\begin{cases}x,&x\geq0\\-x,&x<0\end{cases}
-
-\begin{matrix}a&b\\c&d\end{matrix}
-
-\begin{pmatrix}a&b\\c&d\end{pmatrix}
-
-\begin{bmatrix}a&b\\c&d\end{bmatrix}
-
-\begin{array}{cc}a&b\\c&d\end{array}
-`;
-    const html = renderToStaticMarkup(<MathRenderer content={content} />);
-
-    expect(html).toContain("katex-display");
-    expect(html).toContain("mtable");
     expect(html).not.toContain("katex-error");
     expect(html).not.toContain("Equation could not be rendered.");
   });
 
+  it.each(POWERED_DENOMINATORS)("keeps the superscript inside the denominator for %s", (expression) => {
+    const html = renderMath(`$${expression}$`);
+    const fraction = firstMathMlFraction(html);
+
+    expect(fraction).toContain("<msup><mi>x</mi>");
+    expect(fraction).toContain("</msup></mfrac>");
+  });
+
+  it("renders roots, sums, limits, products, matrices, and aligned equations structurally", () => {
+    const content = String.raw`
+$$\sqrt{\frac{x^2+1}{x^2-1}}$$
+
+$$\sum_{k=1}^{n}\frac{1}{k^2}+\prod_{j=1}^{m}j$$
+
+$$\lim_{x\to0}\frac{\sin x}{x}$$
+
+\begin{align*}
+A&=\begin{pmatrix}a&b\\c&d\end{pmatrix}\\
+B&=\begin{cases}x,&x\geq0\\-x,&x<0\end{cases}
+\end{align*}`;
+    const html = renderMath(content);
+
+    expect(html).toContain("<msqrt>");
+    expect(html).toContain("∑");
+    expect(html).toContain("∏");
+    expect(html).toContain("lim");
+    expect(html).toContain("class=\"mtable\"");
+    expect(html).not.toContain("katex-error");
+  });
+
+  it("renders all supported inline and display delimiter forms", () => {
+    const expression = String.raw`x^{6n+1}+\frac{1}{x^{6n+1}}`;
+    const inlineDollar = renderMath(`$${expression}$`);
+    const inlineParentheses = renderMath(`\\(${expression}\\)`);
+    const displayDollar = renderMath(`$$\n${expression}\n$$`);
+    const displayBrackets = renderMath(`\\[${expression}\\]`);
+
+    expect(inlineDollar).not.toContain("katex-display");
+    expect(inlineParentheses).not.toContain("katex-display");
+    expect(displayDollar).toContain("class=\"katex-display\"");
+    expect(displayBrackets).toContain("class=\"katex-display\"");
+
+    for (const html of [inlineDollar, inlineParentheses, displayDollar, displayBrackets]) {
+      expect(firstMathMlFraction(html)).toContain("</msup></mfrac>");
+      expect(html).not.toContain("katex-error");
+    }
+  });
+
+  it("renders the exact reported question in titles, bodies, answers, and previews through the shared renderer", () => {
+    const expression = String.raw`x^{6n\pm1}+\frac{1}{x^{6n\pm1}}`;
+    const titleHtml = renderMath(`How to prove $$${expression}$$?`, "title");
+    const bodyHtml = renderMath(`The expression is $${expression}$.`);
+    const compactHtml = renderMath(`Answer: $${expression}$.`, "compact");
+
+    for (const html of [titleHtml, bodyHtml, compactHtml]) {
+      expect(firstMathMlFraction(html)).toContain("</msup></mfrac>");
+      expect(html).not.toContain("katex-error");
+    }
+
+    expect(titleHtml).toContain("math-title");
+    expect(titleHtml).not.toContain("katex-display");
+    expect(titleHtml).not.toContain("<p>");
+
+    const forumPage = readFileSync(path.resolve(__dirname, "../components/forum/forum-page-client.tsx"), "utf8");
+    const threadPage = readFileSync(path.resolve(__dirname, "../components/forum/forum-thread-page-client.tsx"), "utf8");
+    const composer = readFileSync(path.resolve(__dirname, "../components/math/math-composer.tsx"), "utf8");
+
+    expect(forumPage.match(/<MathRenderer/g)?.length).toBeGreaterThanOrEqual(4);
+    expect(threadPage.match(/<MathRenderer/g)?.length).toBeGreaterThanOrEqual(3);
+    expect(composer).toContain("<MathRenderer content={value}");
+  });
+
+  it("leaves KaTeX font metrics and internal positioning under KaTeX control", () => {
+    const css = readFileSync(path.resolve(__dirname, "../app/globals.css"), "utf8");
+    const layout = readFileSync(path.resolve(__dirname, "../app/layout.tsx"), "utf8");
+    const applicationKatexRules = css.match(/[^{}]*\.katex[^{}]*\{[^{}]*\}/g) ?? [];
+
+    expect(css).not.toMatch(/(?:^|,)\s*span\s*(?:,|\{)/m);
+    expect(
+      applicationKatexRules.every((rule) => rule.includes(".katex-display") || rule.includes(".katex-error")),
+    ).toBe(true);
+    expect(css).toMatch(/\.math-content \.katex-display\s*\{[^}]*overflow-x:\s*auto;/);
+    expect(css).toMatch(/\.math-content \.katex-display\s*\{[^}]*overflow-y:\s*hidden;/);
+    expect(layout.indexOf('import "katex/dist/katex.min.css"')).toBeLessThan(layout.indexOf('import "./globals.css"'));
+  });
+
   it("replaces invalid LaTeX with a readable error instead of raw commands", () => {
-    const html = renderToStaticMarkup(<MathRenderer content={String.raw`$\notARealCommand{x}$`} />);
+    const html = renderMath(String.raw`$\notARealCommand{x}$`);
 
     expect(html).toContain("Equation could not be rendered.");
     expect(html).not.toContain("\\notARealCommand");

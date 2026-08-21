@@ -1,5 +1,6 @@
 export const NICKNAME_MIN_LENGTH = 3;
 export const NICKNAME_MAX_LENGTH = 24;
+export const GENERATED_NICKNAME_PREFIX = "member-";
 
 const nicknamePattern = /^[a-z0-9][a-z0-9_-]*$/;
 
@@ -18,10 +19,18 @@ export function getNicknameValidationError(value: string) {
     return "Use lowercase letters, numbers, hyphens, or underscores, starting with a letter or number.";
   }
 
+  if (isGeneratedNickname(nickname)) {
+    return `Nicknames beginning with ${GENERATED_NICKNAME_PREFIX} are reserved for existing accounts.`;
+  }
+
   return null;
+}
+
+export function isGeneratedNickname(value: string) {
+  return normalizeNickname(value).startsWith(GENERATED_NICKNAME_PREFIX);
 }
 
 export function getPrivateFallbackNickname(userId: string) {
   const safeId = userId.toLowerCase().replace(/[^a-z0-9]/g, "").slice(-12);
-  return `member-${safeId || "community"}`;
+  return `${GENERATED_NICKNAME_PREFIX}${safeId || "community"}`;
 }

@@ -100,6 +100,26 @@ describe("community features", () => {
     expect(store).toContain("nickname: true");
   });
 
+  it("lets existing members claim their generated nickname without registering again", () => {
+    const nicknameRoutePath = path.resolve(__dirname, "../app/api/account/nickname/route.ts");
+    const accountControlPath = path.resolve(__dirname, "../components/forum/forum-account-control.tsx");
+    const adminAccessPath = path.resolve(__dirname, "../lib/admin-access.ts");
+    const authPath = path.resolve(__dirname, "../lib/auth.ts");
+    const nicknameRoute = readFileSync(nicknameRoutePath, "utf8");
+    const accountControl = readFileSync(accountControlPath, "utf8");
+    const adminAccess = readFileSync(adminAccessPath, "utf8");
+    const auth = readFileSync(authPath, "utf8");
+
+    expect(nicknameRoute).toContain("await auth()");
+    expect(nicknameRoute).toContain("claimGeneratedNickname");
+    expect(accountControl).toContain("Choose nickname");
+    expect(accountControl).toContain("/api/account/nickname");
+    expect(adminAccess).toContain("isGeneratedNickname(user.nickname)");
+    expect(adminAccess).toContain("transaction.forumTopic.updateMany");
+    expect(adminAccess).toContain("transaction.forumReply.updateMany");
+    expect(auth).toContain('trigger === "update"');
+  });
+
   it("supports email verification before login", () => {
     const verifyPath = path.resolve(__dirname, "../app/verify-email/page.tsx");
     expect(existsSync(verifyPath)).toBe(true);

@@ -62,7 +62,6 @@ body {
 
   p,
   li,
-  span,
   a,
   button,
   input,
@@ -174,23 +173,6 @@ aside {
 
 .math-title {
   min-width: 0;
-  line-height: 1.8;
-}
-
-.math-content .katex,
-.math-inline .katex,
-.math-title .katex {
-  overflow-wrap: normal;
-  word-break: normal;
-  white-space: nowrap;
-}
-
-.math-content :not(.katex-display) > .katex,
-.math-inline > .katex,
-.math-title > .katex {
-  /* Keep KaTeX's full vertical box visible so stacked fractions are never clipped. */
-  overflow: visible;
-  vertical-align: baseline;
 }
 
 .math-content > :first-child {

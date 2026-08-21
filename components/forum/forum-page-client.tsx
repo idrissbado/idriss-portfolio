@@ -49,6 +49,7 @@ export function ForumPageClient({
   const router = useRouter();
   const { status } = useSession();
   const [topics, setTopics] = useState(initialTopics);
+  const [featuredMembers, setFeaturedMembers] = useState(initialStats?.featuredMembers ?? []);
   const [form, setForm] = useState(defaultForm);
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("interesting");
@@ -87,7 +88,6 @@ export function ForumPageClient({
     "differential-equations",
   ];
   const hotQuestions = topics.slice(0, 5).map((topic) => topic.title);
-  const featuredMembers = initialStats?.featuredMembers ?? [];
   const questionCount = Math.max(initialStats?.questionCount ?? topics.length, 0);
   const answerCount = Math.max(initialStats?.answerCount ?? topics.reduce((total, topic) => total + topic.replies.length, 0), 0);
   const memberCount = Math.max(initialStats?.memberCount ?? 0, 0);
@@ -96,6 +96,29 @@ export function ForumPageClient({
     { label: "Questions", value: String(questionCount) },
     { label: "Answers", value: String(answerCount) },
   ];
+
+  const handleNicknameClaimed = (previousNickname: string, nickname: string) => {
+    const previous = previousNickname.trim().toLowerCase();
+    const replaceNickname = (authorName: string) =>
+      authorName.trim().toLowerCase() === previous ? nickname : authorName;
+
+    setTopics((currentTopics) =>
+      currentTopics.map((topic) => ({
+        ...topic,
+        authorName: replaceNickname(topic.authorName),
+        replies: topic.replies.map((reply) => ({
+          ...reply,
+          authorName: replaceNickname(reply.authorName),
+        })),
+      })),
+    );
+    setFeaturedMembers((members) =>
+      members.map((member) => ({
+        ...member,
+        name: replaceNickname(member.name),
+      })),
+    );
+  };
 
   const filteredTopics = [...topics]
     .filter((topic) => {
@@ -347,7 +370,7 @@ export function ForumPageClient({
                 />
               </label>
 
-              <ForumAccountControl tone="dark" />
+              <ForumAccountControl tone="dark" onNicknameClaimed={handleNicknameClaimed} />
             </div>
           </div>
         </header>

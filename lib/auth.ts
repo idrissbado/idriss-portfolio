@@ -54,7 +54,7 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id;
         token.role = user.role ?? "member";
@@ -65,6 +65,17 @@ export const authOptions: NextAuthOptions = {
             ? user.emailVerified
             : new Date(user.emailVerified).toISOString()
           : null;
+      } else if (trigger === "update" && token.email) {
+        const refreshedUser = await findUserByEmail(token.email);
+
+        if (refreshedUser && refreshedUser.id === String(token.id ?? "")) {
+          const previousNickname = String(token.nickname ?? "");
+          token.nickname = refreshedUser.nickname;
+
+          if (!refreshedUser.name || token.name === previousNickname) {
+            token.name = refreshedUser.name ?? refreshedUser.nickname;
+          }
+        }
       }
       return token;
     },

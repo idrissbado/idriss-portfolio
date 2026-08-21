@@ -86,12 +86,6 @@ const inlineComponents: NonNullable<ComponentProps<typeof ReactMarkdown>["compon
   a: ({ children }) => <>{children}</>,
 };
 
-function normalizeTitleLatex(content: string) {
-  return content
-    .replace(/\$\$([\s\S]*?)\$\$/g, (_match, expression: string) => `$${expression.trim()}$`)
-    .replace(/\\\[([\s\S]*?)\\\]/g, (_match, expression: string) => `\\(${expression.trim()}\\)`);
-}
-
 type MathRendererProps = {
   content: string;
   variant?: "body" | "compact" | "inline" | "title";
@@ -100,7 +94,7 @@ type MathRendererProps = {
 
 export function MathRenderer({ content, variant = "body", className }: MathRendererProps) {
   const isInlineLayout = variant === "inline" || variant === "title";
-  const normalizedContent = normalizeLatexDelimiters(variant === "title" ? normalizeTitleLatex(content) : content);
+  const normalizedContent = normalizeLatexDelimiters(content, { inlineOnly: isInlineLayout });
   const markdown = (
     <ReactMarkdown
       remarkPlugins={remarkPlugins}

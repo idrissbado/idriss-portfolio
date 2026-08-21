@@ -65,6 +65,31 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
   };
   const votes = Math.max(replies.length + 1, 1);
 
+  const handleNicknameClaimed = (previousNickname: string, nickname: string) => {
+    const previous = previousNickname.trim().toLowerCase();
+    const replaceNickname = (authorName: string) =>
+      authorName.trim().toLowerCase() === previous ? nickname : authorName;
+
+    setQuestion((currentQuestion) => ({
+      ...currentQuestion,
+      authorName: replaceNickname(currentQuestion.authorName),
+      replies: currentQuestion.replies.map((reply) => ({
+        ...reply,
+        authorName: replaceNickname(reply.authorName),
+      })),
+    }));
+    setReplies((currentReplies) =>
+      currentReplies.map((reply) => ({
+        ...reply,
+        authorName: replaceNickname(reply.authorName),
+      })),
+    );
+    setStatusMessage({
+      type: "success",
+      message: `Your public nickname is now @${nickname}. Your existing posts have been updated.`,
+    });
+  };
+
   const handleQuestionUpdate = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -304,7 +329,7 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
           <Link href="/forum" className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-2 text-sm font-medium text-stone-700 transition hover:border-stone-400 hover:text-stone-950 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:hover:text-white">
             ← Back to forum
           </Link>
-          <ForumAccountControl tone="light" />
+          <ForumAccountControl tone="light" onNicknameClaimed={handleNicknameClaimed} />
         </div>
 
         {statusMessage.message ? (

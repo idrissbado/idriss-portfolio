@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
-import { getNicknameValidationError, normalizeNickname } from "@/lib/nickname";
+import { getNicknameValidationError, isGeneratedNickname, normalizeNickname } from "@/lib/nickname";
 
 export type AdminUser = {
   id: string;
@@ -20,6 +20,16 @@ export class AccountConflictError extends Error {
   constructor(public readonly field: "email" | "nickname") {
     super(field === "nickname" ? "This nickname is already taken." : "An account with this email already exists.");
     this.name = "AccountConflictError";
+  }
+}
+
+export class NicknameClaimError extends Error {
+  constructor(
+    public readonly code: "already-claimed" | "invalid" | "not-found",
+    message: string,
+  ) {
+    super(message);
+    this.name = "NicknameClaimError";
   }
 }
 
@@ -178,6 +188,71 @@ export async function createUserAccount(input: {
 
     console.error("Database error while creating user account:", error);
     throw new Error("The database is unavailable right now. Please try again in a moment.");
+  }
+}
+
+export async function claimGeneratedNickname(input: {
+  userId: string;
+  email: string;
+  nickname: string;
+}) {
+  const userId = input.userId.trim();
+  const email = input.email.trim().toLowerCase();
+  const nickname = normalizeNickname(input.nickname);
+  const nicknameError = getNicknameValidationError(nickname);
+
+  if (nicknameError) {
+    throw new NicknameClaimError("invalid", nicknameError);
+  }
+
+  try {
+    return await prisma.$transaction(async (transaction) => {
+      const user = await transaction.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true, nickname: true },
+      });
+
+      if (!user || user.email.trim().toLowerCase() !== email) {
+        throw new NicknameClaimError("not-found", "Your account could not be found.");
+      }
+
+      if (!isGeneratedNickname(user.nickname)) {
+        throw new NicknameClaimError(
+          "already-claimed",
+          "You have already claimed your permanent public nickname.",
+        );
+      }
+
+      const updatedUser = await transaction.user.update({
+        where: { id: user.id },
+        data: { nickname },
+        select: { nickname: true },
+      });
+
+      await Promise.all([
+        transaction.forumTopic.updateMany({
+          where: { authorEmail: { equals: user.email, mode: "insensitive" } },
+          data: { authorName: nickname },
+        }),
+        transaction.forumReply.updateMany({
+          where: { authorEmail: { equals: user.email, mode: "insensitive" } },
+          data: { authorName: nickname },
+        }),
+      ]);
+
+      return updatedUser;
+    });
+  } catch (error) {
+    if (error instanceof NicknameClaimError) {
+      throw error;
+    }
+
+    if (getUniqueConstraintField(error) === "nickname") {
+      throw new AccountConflictError("nickname");
+    }
+
+    console.error("Database error while claiming a nickname:", error);
+    throw new Error("The nickname could not be saved right now. Please try again in a moment.");
   }
 }
 
