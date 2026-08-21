@@ -1,5 +1,5 @@
 -- Add a private-by-default public identity for every account.
-ALTER TABLE "User" ADD COLUMN "nickname" TEXT;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "nickname" TEXT;
 
 -- Existing accounts receive an anonymous stable nickname. New accounts choose
 -- their own nickname during registration.
@@ -11,14 +11,24 @@ ALTER TABLE "User" ALTER COLUMN "nickname" SET NOT NULL;
 
 -- Nicknames are stored normalized to lowercase, making first-claim ownership
 -- case-insensitive while retaining an ordinary Prisma unique field.
-ALTER TABLE "User"
-ADD CONSTRAINT "User_nickname_format_check"
-CHECK (
-  "nickname" = LOWER("nickname")
-  AND "nickname" ~ '^[a-z0-9][a-z0-9_-]{2,23}$'
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'User_nickname_format_check'
+      AND conrelid = '"User"'::regclass
+  ) THEN
+    ALTER TABLE "User"
+    ADD CONSTRAINT "User_nickname_format_check"
+    CHECK (
+      "nickname" = LOWER("nickname")
+      AND "nickname" ~ '^[a-z0-9][a-z0-9_-]{2,23}$'
+    );
+  END IF;
+END $$;
 
-CREATE UNIQUE INDEX "User_nickname_key" ON "User"("nickname");
+CREATE UNIQUE INDEX IF NOT EXISTS "User_nickname_key" ON "User"("nickname");
 
 -- Replace any previously copied real names in public forum records with the
 -- account nickname while keeping email ownership data private in the database.

@@ -68,11 +68,18 @@ describe("community features", () => {
   it("stores one unique normalized nickname per user", () => {
     const schemaPath = path.resolve(__dirname, "../prisma/schema.prisma");
     const migrationPath = path.resolve(__dirname, "../prisma/migrations/20260821090000_add_unique_user_nickname/migration.sql");
+    const baselinePath = path.resolve(__dirname, "../prisma/migrations/0_init/migration.sql");
+    const deployScriptPath = path.resolve(__dirname, "../scripts/deploy-prisma-migrations.mjs");
     const schema = readFileSync(schemaPath, "utf8");
     const migration = readFileSync(migrationPath, "utf8");
+    const deployScript = readFileSync(deployScriptPath, "utf8");
 
     expect(schema).toContain("nickname              String    @unique");
-    expect(migration).toContain('CREATE UNIQUE INDEX "User_nickname_key"');
+    expect(existsSync(baselinePath)).toBe(true);
+    expect(deployScript).toContain('initialOutput.includes("P3005")');
+    expect(deployScript).toContain('"resolve", "--applied", BASELINE_MIGRATION');
+    expect(migration).toContain('ADD COLUMN IF NOT EXISTS "nickname"');
+    expect(migration).toContain('CREATE UNIQUE INDEX IF NOT EXISTS "User_nickname_key"');
     expect(migration).toContain('"nickname" = LOWER("nickname")');
   });
 
