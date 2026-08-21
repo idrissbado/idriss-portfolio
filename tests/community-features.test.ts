@@ -78,6 +78,8 @@ describe("community features", () => {
     expect(existsSync(baselinePath)).toBe(true);
     expect(deployScript).toContain('initialOutput.includes("P3005")');
     expect(deployScript).toContain('"resolve", "--applied", BASELINE_MIGRATION');
+    expect(deployScript).toContain('output.includes("P1002")');
+    expect(deployScript).toContain('output.includes("advisory lock")');
     expect(migration).toContain('ADD COLUMN IF NOT EXISTS "nickname"');
     expect(migration).toContain('CREATE UNIQUE INDEX IF NOT EXISTS "User_nickname_key"');
     expect(migration).toContain('"nickname" = LOWER("nickname")');
