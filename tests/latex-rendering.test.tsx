@@ -64,21 +64,28 @@ $$`;
   it("keeps stacked inline fractions visible below the fraction bar", () => {
     const html = renderToStaticMarkup(<MathRenderer content={String.raw`If $x+\frac{1}{x}$ is an integer.`} />);
     const css = readFileSync(path.resolve(__dirname, "../app/globals.css"), "utf8");
+    const inlineMathRule = css.match(
+      /\.math-content :not\(\.katex-display\) > \.katex,[^}]*\.math-inline > \.katex,[^}]*\{[^}]*\}/,
+    )?.[0] ?? "";
 
     expect(html).toContain("mfrac");
     expect(html).toContain("frac-line");
-    expect(css).toMatch(/\.math-inline\s*>\s*\.katex\s*\{[^}]*overflow:\s*visible;/);
-    expect(css).not.toMatch(/\.math-inline\s*>\s*\.katex\s*\{[^}]*overflow-y:\s*hidden;/);
+    expect(inlineMathRule).toContain("overflow: visible;");
+    expect(inlineMathRule).not.toContain("overflow-y: hidden;");
   });
 
   it("renders LaTeX titles inline without a paragraph wrapper", () => {
     const html = renderToStaticMarkup(
-      <MathRenderer content={"How to prove $x^{6n\\pm1}+\\frac{1}{x^{6n\\pm1}}$?"} variant="inline" />,
+      <MathRenderer content={"How to prove $$x^{6n\\pm1}+\\frac{1}{x^{6n\\pm1}}$$?"} variant="title" />,
     );
+    const css = readFileSync(path.resolve(__dirname, "../app/globals.css"), "utf8");
 
-    expect(html).toContain("math-inline");
+    expect(html).toContain("math-title");
     expect(html).toContain("class=\"katex\"");
+    expect(html).toContain("mfrac");
+    expect(html).not.toContain("katex-display");
     expect(html).not.toContain("<p>");
+    expect(css).toMatch(/\.math-title\s*\{[^}]*line-height:\s*1\.8;/);
   });
 
   it("uses compact typography for forum excerpts with several equations", () => {

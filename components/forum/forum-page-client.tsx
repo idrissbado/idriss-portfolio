@@ -552,7 +552,7 @@ export function ForumPageClient({
                     {form.title.trim() ? (
                       <div className="mt-3 rounded-[6px] border border-[#e3e6e8] bg-white px-3 py-2.5 text-base font-semibold text-stone-900 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-50">
                         <span className="mr-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-stone-500 dark:text-stone-400">Preview</span>
-                        <MathRenderer content={form.title} variant="inline" />
+                        <MathRenderer content={form.title} variant="title" />
                       </div>
                     ) : null}
                   </div>
@@ -812,7 +812,7 @@ export function ForumPageClient({
                           </div>
 
                           <Link href={`/forum/${topic.slug}`} className="mt-3 block text-xl font-semibold leading-snug text-stone-900 transition hover:text-stone-700 dark:text-stone-50 dark:hover:text-stone-200 sm:text-[1.55rem]">
-                            <MathRenderer content={topic.title} variant="inline" />
+                            <MathRenderer content={topic.title} variant="title" />
                           </Link>
 
                           <div className="mt-3 text-sm leading-6 text-stone-600 dark:text-stone-300">
@@ -876,7 +876,7 @@ export function ForumPageClient({
                       <div key={question} className="flex gap-3 rounded-2xl border border-stone-200 bg-stone-50 p-3 text-sm text-stone-700 dark:border-stone-800 dark:bg-stone-950/60 dark:text-stone-200">
                         <span className="mt-1 text-base text-stone-400">◉</span>
                         <p className="min-w-0 leading-6">
-                          <MathRenderer content={question} variant="inline" />
+                          <MathRenderer content={question} variant="title" />
                         </p>
                       </div>
                     ))

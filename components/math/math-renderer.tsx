@@ -86,26 +86,34 @@ const inlineComponents: NonNullable<ComponentProps<typeof ReactMarkdown>["compon
   a: ({ children }) => <>{children}</>,
 };
 
+function normalizeTitleLatex(content: string) {
+  return content
+    .replace(/\$\$([\s\S]*?)\$\$/g, (_match, expression: string) => `$${expression.trim()}$`)
+    .replace(/\\\[([\s\S]*?)\\\]/g, (_match, expression: string) => `\\(${expression.trim()}\\)`);
+}
+
 type MathRendererProps = {
   content: string;
-  variant?: "body" | "compact" | "inline";
+  variant?: "body" | "compact" | "inline" | "title";
   className?: string;
 };
 
 export function MathRenderer({ content, variant = "body", className }: MathRendererProps) {
+  const isInlineLayout = variant === "inline" || variant === "title";
+  const normalizedContent = normalizeLatexDelimiters(variant === "title" ? normalizeTitleLatex(content) : content);
   const markdown = (
     <ReactMarkdown
       remarkPlugins={remarkPlugins}
       rehypePlugins={rehypePlugins}
-      components={variant === "inline" ? inlineComponents : undefined}
+      components={isInlineLayout ? inlineComponents : undefined}
       skipHtml
     >
-      {normalizeLatexDelimiters(content)}
+      {normalizedContent}
     </ReactMarkdown>
   );
 
-  if (variant === "inline") {
-    return <span className={cn("math-inline", className)}>{markdown}</span>;
+  if (isInlineLayout) {
+    return <span className={cn(variant === "title" ? "math-title" : "math-inline", className)}>{markdown}</span>;
   }
 
   return (
