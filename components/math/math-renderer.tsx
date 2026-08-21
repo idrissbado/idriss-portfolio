@@ -70,6 +70,10 @@ const rehypePlugins: NonNullable<ComponentProps<typeof ReactMarkdown>["rehypePlu
       strict: "ignore",
       trust: false,
       macros: {
+        // Give forum fractions display-style vertical clearance while keeping
+        // the submitted LaTeX source unchanged. Authors can still use \tfrac
+        // when they intentionally want a compact inline fraction.
+        "\\frac": "\\dfrac{#1}{#2}",
         "\\RR": "\\mathbb{R}",
         "\\NN": "\\mathbb{N}",
         "\\ZZ": "\\mathbb{Z}",

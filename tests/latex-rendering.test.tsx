@@ -113,6 +113,16 @@ describe("professional KaTeX rendering", () => {
     expect(fraction).toContain("</msup></mfrac>");
   });
 
+  it("adds clear vertical space between the fraction bar and denominator", () => {
+    const html = renderMath(String.raw`$x+\frac{1}{x^{6n+1}}$`);
+
+    // Display-style fractions keep the denominator at full math size instead
+    // of compressing it into KaTeX's cramped inline fraction style.
+    expect(html).toContain('class="mfrac"');
+    expect(html).not.toContain("reset-size3 size1 mtight");
+    expect(firstMathMlFraction(html)).toContain("</msup></mfrac>");
+  });
+
   it("renders roots, sums, limits, products, matrices, and aligned equations structurally", () => {
     const content = String.raw`
 $$\sqrt{\frac{x^2+1}{x^2-1}}$$
