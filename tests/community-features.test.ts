@@ -116,13 +116,18 @@ describe("community features", () => {
 
   it("allows an author to edit or delete an answer", () => {
     const routePath = path.resolve(__dirname, "../app/api/forum/[slug]/replies/[replyId]/route.ts");
+    const threadPath = path.resolve(__dirname, "../components/forum/forum-thread-page-client.tsx");
     expect(existsSync(routePath)).toBe(true);
 
     const content = readFileSync(routePath, "utf8");
+    const threadContent = readFileSync(threadPath, "utf8");
     expect(content).toContain("PATCH");
     expect(content).toContain("DELETE");
     expect(content).toContain("updateForumReply");
     expect(content).toContain("deleteForumReply");
+    expect(content).toContain("await auth()");
+    expect(threadContent).toContain("MathComposer");
+    expect(threadContent).toContain("Edit answer");
   });
 
   it("exposes the subscriber API endpoint", () => {

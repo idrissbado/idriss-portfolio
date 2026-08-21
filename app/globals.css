@@ -161,6 +161,150 @@ aside {
   box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.05);
 }
 
+.math-content {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.math-content > :first-child {
+  margin-top: 0;
+}
+
+.math-content > :last-child {
+  margin-bottom: 0;
+}
+
+.math-content p,
+.math-content ul,
+.math-content ol,
+.math-content blockquote,
+.math-content pre,
+.math-content table,
+.math-content .katex-display {
+  margin: 1rem 0;
+}
+
+.math-content h1,
+.math-content h2,
+.math-content h3,
+.math-content h4 {
+  margin: 1.5rem 0 0.75rem;
+  line-height: 1.25;
+}
+
+.math-content h1 {
+  font-size: 1.75rem;
+}
+
+.math-content h2 {
+  font-size: 1.45rem;
+}
+
+.math-content h3 {
+  font-size: 1.2rem;
+}
+
+.math-content ul,
+.math-content ol {
+  padding-left: 1.5rem;
+}
+
+.math-content ul {
+  list-style: disc;
+}
+
+.math-content ol {
+  list-style: decimal;
+}
+
+.math-content li + li {
+  margin-top: 0.35rem;
+}
+
+.math-content blockquote {
+  border-left: 3px solid rgba(120, 113, 108, 0.45);
+  padding-left: 1rem;
+  color: #57534e;
+}
+
+.math-content a {
+  color: #0369a1;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.math-content :not(pre) > code,
+.math-content code:not(pre code) {
+  border-radius: 0.35rem;
+  background: #f1f5f9;
+  padding: 0.12rem 0.35rem;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.9em;
+}
+
+.math-content pre {
+  overflow-x: auto;
+  border: 1px solid #e7e5e4;
+  border-radius: 0.85rem;
+  background: #1c1917;
+  padding: 1rem;
+  color: #fafaf9;
+  font-size: 0.9rem;
+  line-height: 1.65;
+}
+
+.math-content table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.math-content th,
+.math-content td {
+  border: 1px solid #d6d3d1;
+  padding: 0.45rem 0.7rem;
+  text-align: left;
+}
+
+.math-content .katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.45rem 0.15rem;
+}
+
+.math-content .katex-error {
+  color: #be123c;
+  white-space: pre-wrap;
+}
+
+.math-editor-tool {
+  display: inline-flex;
+  min-width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d6d3d1;
+  border-radius: 0.45rem;
+  background: white;
+  padding: 0 0.45rem;
+  color: #44403c;
+  font-size: 0.8rem;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.math-editor-tool:hover:not(:disabled) {
+  border-color: #78716c;
+  background: #f5f5f4;
+}
+
+.math-editor-tool:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 @keyframes floatSoft {
   0%, 100% {
     transform: translate3d(0, 0, 0) scale(1);
@@ -191,6 +335,37 @@ aside {
   body {
     background: linear-gradient(180deg, #0d1218 0%, #101923 100%);
     color: var(--foreground);
+  }
+
+  .math-content blockquote {
+    border-left-color: rgba(168, 162, 158, 0.55);
+    color: #d6d3d1;
+  }
+
+  .math-content a {
+    color: #7dd3fc;
+  }
+
+  .math-content :not(pre) > code,
+  .math-content code:not(pre code) {
+    background: #292524;
+  }
+
+  .math-content th,
+  .math-content td,
+  .math-content pre {
+    border-color: #44403c;
+  }
+
+  .math-editor-tool {
+    border-color: #57534e;
+    background: #1c1917;
+    color: #e7e5e4;
+  }
+
+  .math-editor-tool:hover:not(:disabled) {
+    border-color: #a8a29e;
+    background: #292524;
   }
 
   h1,

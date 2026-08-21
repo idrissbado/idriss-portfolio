@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { auth } from "@/lib/auth";
 import { createForumReply, deleteForumTopic, getForumTopicBySlug, updateForumTopic } from "@/lib/community-store";
 
 const replySchema = z.object({
-  authorName: z.string().trim().min(2, "Your name is required."),
-  authorEmail: z.string().trim().email("Please provide a valid email address.").optional().or(z.literal("")),
   content: z.string().trim().min(2, "A reply cannot be empty."),
 });
 
@@ -40,6 +39,12 @@ export async function GET(_request: Request, context: { params: Promise<{ slug: 
 
 export async function POST(request: Request, context: { params: Promise<{ slug: string }> | { slug: string } }) {
   try {
+    const session = await auth();
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Please log in to post an answer." }, { status: 401 });
+    }
+
     const { slug } = await context.params;
     const body = await request.json();
     const parsed = replySchema.safeParse(body);
@@ -53,8 +58,8 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
 
     const reply = await createForumReply({
       slug,
-      authorName: parsed.data.authorName,
-      authorEmail: parsed.data.authorEmail || undefined,
+      authorName: session.user.name?.trim() || session.user.email,
+      authorEmail: session.user.email,
       content: parsed.data.content,
     });
 

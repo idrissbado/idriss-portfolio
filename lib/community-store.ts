@@ -59,6 +59,30 @@ const fallbackSubscribers: SubscriberRecord[] = [];
 
 const fallbackTopics: ForumTopic[] = [];
 
+function canManageForumEntry(input: {
+  ownerEmail?: string | null;
+  ownerName: string;
+  editorEmail?: string;
+  editorName?: string;
+  isModerator?: boolean;
+}) {
+  if (input.isModerator) {
+    return true;
+  }
+
+  const ownerEmail = input.ownerEmail?.trim().toLowerCase();
+  const editorEmail = input.editorEmail?.trim().toLowerCase();
+
+  if (ownerEmail) {
+    return Boolean(editorEmail && editorEmail === ownerEmail);
+  }
+
+  const ownerName = input.ownerName.trim().toLowerCase();
+  const editorName = input.editorName?.trim().toLowerCase();
+
+  return Boolean(ownerName && editorName && ownerName === editorName);
+}
+
 const slugify = (value: string) =>
   value
     .toLowerCase()
@@ -560,22 +584,21 @@ export async function updateForumReply(input: {
   slug: string;
   replyId: string;
   content?: string;
-  authorName?: string;
-  authorEmail?: string;
   editorEmail?: string;
+  editorName?: string;
+  isModerator?: boolean;
   imageUrl?: string | null;
   imageAltText?: string | null;
 }) {
   const slug = input.slug.trim();
   const replyId = input.replyId.trim();
   const content = input.content?.trim();
-  const authorName = input.authorName?.trim();
-  const authorEmail = input.authorEmail?.trim().toLowerCase();
   const editorEmail = input.editorEmail?.trim().toLowerCase();
+  const editorName = input.editorName?.trim();
   const nextImageUrl = sanitizeImageUrl(input.imageUrl);
   const nextImageAltText = input.imageAltText?.trim() || undefined;
 
-  if (!slug || !replyId || (!content && !authorName && !authorEmail)) {
+  if (!slug || !replyId || (!content && input.imageUrl === undefined)) {
     return null;
   }
 
@@ -590,11 +613,13 @@ export async function updateForumReply(input: {
       return null;
     }
 
-    const isAllowedByEmail = !!editorEmail && !!reply.authorEmail && editorEmail === reply.authorEmail.trim().toLowerCase();
-    const isAllowedByName = !!authorName && reply.authorName.trim().toLowerCase() === authorName.trim().toLowerCase();
-    const isAllowedByAuthorEmail = !!authorEmail && !!reply.authorEmail && authorEmail === reply.authorEmail.trim().toLowerCase();
-
-    if (!isAllowedByEmail && !isAllowedByName && !isAllowedByAuthorEmail) {
+    if (!canManageForumEntry({
+      ownerEmail: reply.authorEmail,
+      ownerName: reply.authorName,
+      editorEmail,
+      editorName,
+      isModerator: input.isModerator,
+    })) {
       return null;
     }
 
@@ -604,8 +629,6 @@ export async function updateForumReply(input: {
         content: content ?? reply.content,
         imageUrl: nextImageUrl ?? reply.imageUrl ?? null,
         imageAltText: nextImageUrl ? (nextImageAltText ?? reply.imageAltText ?? "Attached image") : null,
-        authorName: authorName ?? reply.authorName,
-        authorEmail: authorEmail || reply.authorEmail || null,
       },
     });
 
@@ -622,11 +645,13 @@ export async function updateForumReply(input: {
       return null;
     }
 
-    const isAllowedByEmail = !!editorEmail && !!target.authorEmail && editorEmail === target.authorEmail.trim().toLowerCase();
-    const isAllowedByName = !!authorName && target.authorName.trim().toLowerCase() === authorName.trim().toLowerCase();
-    const isAllowedByAuthorEmail = !!authorEmail && !!target.authorEmail && authorEmail === target.authorEmail.trim().toLowerCase();
-
-    if (!isAllowedByEmail && !isAllowedByName && !isAllowedByAuthorEmail) {
+    if (!canManageForumEntry({
+      ownerEmail: target.authorEmail,
+      ownerName: target.authorName,
+      editorEmail,
+      editorName,
+      isModerator: input.isModerator,
+    })) {
       return null;
     }
 
@@ -635,8 +660,6 @@ export async function updateForumReply(input: {
       content: content ?? target.content,
       imageUrl: nextImageUrl ?? target.imageUrl ?? null,
       imageAltText: nextImageUrl ? (nextImageAltText ?? target.imageAltText ?? "Attached image") : null,
-      authorName: authorName ?? target.authorName,
-      authorEmail: authorEmail || target.authorEmail || null,
       updatedAt: new Date().toISOString(),
     } satisfies ForumReplyRecord;
 
@@ -648,15 +671,14 @@ export async function updateForumReply(input: {
 export async function deleteForumReply(input: {
   slug: string;
   replyId: string;
-  authorEmail?: string;
   editorEmail?: string;
-  authorName?: string;
+  editorName?: string;
+  isModerator?: boolean;
 }) {
   const slug = input.slug.trim();
   const replyId = input.replyId.trim();
-  const authorEmail = input.authorEmail?.trim().toLowerCase();
   const editorEmail = input.editorEmail?.trim().toLowerCase();
-  const authorName = input.authorName?.trim();
+  const editorName = input.editorName?.trim();
 
   if (!slug || !replyId) {
     return false;
@@ -673,11 +695,13 @@ export async function deleteForumReply(input: {
       return false;
     }
 
-    const isAllowedByEmail = !!editorEmail && !!reply.authorEmail && editorEmail === reply.authorEmail.trim().toLowerCase();
-    const isAllowedByName = !!authorName && reply.authorName.trim().toLowerCase() === authorName.trim().toLowerCase();
-    const isAllowedByAuthorEmail = !!authorEmail && !!reply.authorEmail && authorEmail === reply.authorEmail.trim().toLowerCase();
-
-    if (!isAllowedByEmail && !isAllowedByName && !isAllowedByAuthorEmail) {
+    if (!canManageForumEntry({
+      ownerEmail: reply.authorEmail,
+      ownerName: reply.authorName,
+      editorEmail,
+      editorName,
+      isModerator: input.isModerator,
+    })) {
       return false;
     }
 
@@ -696,11 +720,13 @@ export async function deleteForumReply(input: {
     }
 
     const target = topic.replies[targetIndex];
-    const isAllowedByEmail = !!editorEmail && !!target.authorEmail && editorEmail === target.authorEmail.trim().toLowerCase();
-    const isAllowedByName = !!authorName && target.authorName.trim().toLowerCase() === authorName.trim().toLowerCase();
-    const isAllowedByAuthorEmail = !!authorEmail && !!target.authorEmail && authorEmail === target.authorEmail.trim().toLowerCase();
-
-    if (!isAllowedByEmail && !isAllowedByName && !isAllowedByAuthorEmail) {
+    if (!canManageForumEntry({
+      ownerEmail: target.authorEmail,
+      ownerName: target.authorName,
+      editorEmail,
+      editorName,
+      isModerator: input.isModerator,
+    })) {
       return false;
     }
 

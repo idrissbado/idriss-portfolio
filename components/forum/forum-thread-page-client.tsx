@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useSession } from "next-auth/react";
+import { MathComposer } from "@/components/math/math-composer";
 import { MathRenderer } from "@/components/math/math-renderer";
 import type { ForumReplyRecord, ForumTopic } from "@/lib/community-store";
 
@@ -20,8 +21,6 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
   const [question, setQuestion] = useState<ForumTopic>(topic);
   const [replies, setReplies] = useState<ForumReplyRecord[]>(topic.replies);
   const [draft, setDraft] = useState("");
-  const [authorName, setAuthorName] = useState("");
-  const [authorEmail, setAuthorEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [isEditingQuestion, setIsEditingQuestion] = useState(false);
   const [editingReplyId, setEditingReplyId] = useState<string | null>(null);
@@ -38,24 +37,35 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
     message: "",
   });
 
-  useEffect(() => {
-    if (!session?.user) {
-      return;
-    }
-
-    setAuthorName((current) => current || String(session.user?.name ?? ""));
-    setAuthorEmail((current) => current || String(session.user?.email ?? ""));
-  }, [session]);
-
   const isAuthenticated = status === "authenticated";
+  const isModerator = ["admin", "editor"].includes(session?.user?.role?.toLowerCase() ?? "");
   const canEditQuestion = isAuthenticated && (
     (session?.user?.email && question.authorEmail && session.user.email.toLowerCase() === question.authorEmail.toLowerCase()) ||
     (session?.user?.name && question.authorName && session.user.name.trim().toLowerCase() === question.authorName.trim().toLowerCase())
   );
-  const canEditReply = (reply: ForumReplyRecord) => isAuthenticated && (
-    (session?.user?.email && reply.authorEmail && session.user.email.toLowerCase() === reply.authorEmail.toLowerCase()) ||
-    (session?.user?.name && reply.authorName && session.user.name.trim().toLowerCase() === reply.authorName.trim().toLowerCase())
-  );
+  const canEditReply = (reply: ForumReplyRecord) => {
+    if (!isAuthenticated) {
+      return false;
+    }
+
+    if (isModerator) {
+      return true;
+    }
+
+    const sessionEmail = session?.user?.email?.trim().toLowerCase();
+    const replyEmail = reply.authorEmail?.trim().toLowerCase();
+
+    if (sessionEmail && replyEmail) {
+      return sessionEmail === replyEmail;
+    }
+
+    return Boolean(
+      !replyEmail &&
+      session?.user?.name &&
+      reply.authorName &&
+      session.user.name.trim().toLowerCase() === reply.authorName.trim().toLowerCase(),
+    );
+  };
   const votes = Math.max(replies.length + 1, 1);
 
   const handleQuestionUpdate = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -184,9 +194,6 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           content: updatedContent,
-          authorName: session?.user?.name || targetReply.authorName,
-          authorEmail: session?.user?.email || targetReply.authorEmail || undefined,
-          editorEmail: session?.user?.email || targetReply.authorEmail || undefined,
         }),
       });
 
@@ -236,11 +243,6 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
       const response = await fetch(`/api/forum/${question.slug}/replies/${replyId}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          authorName: targetReply.authorName,
-          authorEmail: targetReply.authorEmail || session?.user?.email || undefined,
-          editorEmail: session?.user?.email || targetReply.authorEmail || undefined,
-        }),
       });
 
       const payload = (await response.json()) as { error?: string };
@@ -280,8 +282,6 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          authorName: authorName.trim() || session?.user?.name || "Community member",
-          authorEmail: authorEmail.trim() || session?.user?.email || undefined,
           content: draft,
         }),
       });
@@ -297,8 +297,6 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
       }
 
       setDraft("");
-      setAuthorName("");
-      setAuthorEmail("");
       setStatusMessage({ type: "success", message: "Your reply has been added." });
     } catch (error) {
       setStatusMessage({
@@ -321,6 +319,19 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
             Member-only
           </div>
         </div>
+
+        {statusMessage.message ? (
+          <p
+            aria-live="polite"
+            className={`mb-6 rounded-2xl border px-4 py-3 text-sm ${
+              statusMessage.type === "success"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300"
+                : "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300"
+            }`}
+          >
+            {statusMessage.message}
+          </p>
+        ) : null}
 
         <article className="premium-surface forum-panel-glow rounded-[32px] border border-stone-200 bg-white/85 p-6 shadow-[0_25px_70px_rgba(15,23,42,0.06)] backdrop-blur-sm dark:border-stone-800 dark:bg-stone-900/85 sm:p-8">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
@@ -489,17 +500,22 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
 
                       {editingReplyId === reply.id ? (
                         <div className="mt-4 space-y-3">
-                          <textarea
+                          <label htmlFor={`reply-editor-${reply.id}`} className="block text-sm font-semibold text-stone-700 dark:text-stone-200">
+                            Edit answer
+                          </label>
+                          <MathComposer
+                            id={`reply-editor-${reply.id}`}
                             value={replyDrafts[reply.id] ?? reply.content}
-                            onChange={(event) => setReplyDrafts((current) => ({ ...current, [reply.id]: event.target.value }))}
-                            className="min-h-[140px] w-full rounded-[20px] border border-stone-300 bg-white px-3 py-3 text-sm outline-none focus:border-stone-500 dark:border-stone-700 dark:bg-stone-950"
-                            required
+                            onChange={(value) => setReplyDrafts((current) => ({ ...current, [reply.id]: value }))}
+                            disabled={submitting}
+                            minHeightClassName="min-h-44"
+                            placeholder="Refine your reasoning. Markdown and LaTeX are supported."
                           />
                           <div className="flex flex-wrap gap-3">
-                            <button type="button" onClick={() => handleReplyUpdate(reply.id)} className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 dark:bg-stone-100 dark:text-stone-900">
-                              Save
+                            <button type="button" onClick={() => handleReplyUpdate(reply.id)} disabled={submitting || !(replyDrafts[reply.id] ?? reply.content).trim()} className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-stone-100 dark:text-stone-900">
+                              {submitting ? "Saving..." : "Save answer"}
                             </button>
-                            <button type="button" onClick={() => { setEditingReplyId(null); setReplyDrafts((current) => ({ ...current, [reply.id]: "" })); }} className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 hover:border-stone-500 dark:border-stone-700 dark:text-stone-200">
+                            <button type="button" disabled={submitting} onClick={() => { setEditingReplyId(null); setReplyDrafts((current) => ({ ...current, [reply.id]: "" })); }} className="rounded-full border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 hover:border-stone-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-stone-700 dark:text-stone-200">
                               Cancel
                             </button>
                           </div>
@@ -515,12 +531,12 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
                         </div>
                       )}
 
-                      {canEditReply(reply) ? (
+                      {canEditReply(reply) && editingReplyId !== reply.id ? (
                         <div className="mt-4 flex flex-wrap gap-2">
-                          <button type="button" onClick={() => { setEditingReplyId(reply.id); setReplyDrafts((current) => ({ ...current, [reply.id]: reply.content })); }} className="rounded-full border border-stone-300 px-3 py-1.5 text-xs font-medium text-stone-700 hover:border-stone-500 dark:border-stone-700 dark:text-stone-200">
+                          <button type="button" disabled={submitting} onClick={() => { setEditingReplyId(reply.id); setReplyDrafts((current) => ({ ...current, [reply.id]: reply.content })); setStatusMessage({ type: "idle", message: "" }); }} className="rounded-full border border-stone-300 px-3 py-1.5 text-xs font-medium text-stone-700 hover:border-stone-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-stone-700 dark:text-stone-200">
                             Edit answer
                           </button>
-                          <button type="button" onClick={() => handleReplyDelete(reply.id)} className="rounded-full border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 hover:border-rose-400 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">
+                          <button type="button" disabled={submitting} onClick={() => handleReplyDelete(reply.id)} className="rounded-full border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 hover:border-rose-400 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">
                             Delete
                           </button>
                         </div>
@@ -552,58 +568,31 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-                  Name
-                  <input
-                    value={authorName}
-                    onChange={(event) => setAuthorName(event.target.value)}
-                    className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-stone-500 dark:border-stone-700 dark:bg-stone-950"
-                    placeholder="Your name"
-                    required
-                  />
-                </label>
-                <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">
-                  Email
-                  <input
-                    type="email"
-                    value={authorEmail}
-                    onChange={(event) => setAuthorEmail(event.target.value)}
-                    className="mt-2 w-full rounded-2xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm outline-none focus:border-stone-500 dark:border-stone-700 dark:bg-stone-950"
-                    placeholder="name@example.com"
-                  />
-                </label>
+              <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-600 dark:border-stone-800 dark:bg-stone-950/60 dark:text-stone-300">
+                Posting as <span className="font-semibold text-stone-900 dark:text-stone-100">{session?.user?.name || session?.user?.email}</span>
               </div>
 
-              <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">
+              <label htmlFor="new-answer-content" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
                 Your reasoning
-                <textarea
-                  value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
-                  className="mt-2 min-h-36 w-full rounded-[22px] border border-stone-300 bg-stone-50 px-3 py-3 text-sm outline-none focus:border-stone-500 dark:border-stone-700 dark:bg-stone-950"
-                  placeholder="Share a proof sketch, a theorem, a counterexample, or a method..."
-                  required
-                />
               </label>
+              <MathComposer
+                id="new-answer-content"
+                value={draft}
+                onChange={setDraft}
+                disabled={submitting}
+                minHeightClassName="min-h-48"
+                placeholder="Share a proof sketch, a theorem, a counterexample, or a method..."
+              />
 
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || draft.trim().length < 2}
                 className="rounded-full bg-stone-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-stone-100 dark:text-stone-900"
               >
                 {submitting ? "Posting..." : "Post answer"}
               </button>
             </form>
           )}
-
-          {statusMessage.message ? (
-            <p
-              aria-live="polite"
-              className={`mt-4 text-sm ${statusMessage.type === "success" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}
-            >
-              {statusMessage.message}
-            </p>
-          ) : null}
         </section>
       </div>
     </div>

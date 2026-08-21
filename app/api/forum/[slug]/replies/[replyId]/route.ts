@@ -1,19 +1,25 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { auth } from "@/lib/auth";
 import { deleteForumReply, updateForumReply } from "@/lib/community-store";
 
 const replyUpdateSchema = z.object({
-  content: z.string().trim().min(2, "A reply cannot be empty.").optional(),
-  authorName: z.string().trim().min(2, "Your name is required.").optional(),
-  authorEmail: z.string().trim().email("Please provide a valid email address.").optional().or(z.literal("")),
-  editorEmail: z.string().trim().email("Please provide a valid email address.").optional().or(z.literal("")),
+  content: z.string().trim().min(2, "A reply cannot be empty."),
 });
+
+const moderatorRoles = new Set(["admin", "editor"]);
 
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ slug: string; replyId: string }> | { slug: string; replyId: string } },
 ) {
   try {
+    const session = await auth();
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Please log in to edit an answer." }, { status: 401 });
+    }
+
     const { slug, replyId } = await context.params;
     const body = await request.json();
     const parsed = replyUpdateSchema.safeParse(body);
@@ -29,9 +35,9 @@ export async function PATCH(
       slug,
       replyId,
       content: parsed.data.content,
-      authorName: parsed.data.authorName,
-      authorEmail: parsed.data.authorEmail || undefined,
-      editorEmail: parsed.data.editorEmail || undefined,
+      editorEmail: session.user.email,
+      editorName: session.user.name ?? undefined,
+      isModerator: moderatorRoles.has(session.user.role?.toLowerCase() ?? ""),
     });
 
     if (!reply) {
@@ -46,22 +52,24 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: Request,
+  _request: Request,
   context: { params: Promise<{ slug: string; replyId: string }> | { slug: string; replyId: string } },
 ) {
   try {
+    const session = await auth();
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Please log in to delete an answer." }, { status: 401 });
+    }
+
     const { slug, replyId } = await context.params;
-    const body = await request.json().catch(() => ({}));
-    const authorEmail = typeof body?.authorEmail === "string" ? body.authorEmail.trim() : undefined;
-    const editorEmail = typeof body?.editorEmail === "string" ? body.editorEmail.trim() : undefined;
-    const authorName = typeof body?.authorName === "string" ? body.authorName.trim() : undefined;
 
     const deleted = await deleteForumReply({
       slug,
       replyId,
-      authorEmail,
-      editorEmail,
-      authorName,
+      editorEmail: session.user.email,
+      editorName: session.user.name ?? undefined,
+      isModerator: moderatorRoles.has(session.user.role?.toLowerCase() ?? ""),
     });
 
     if (!deleted) {
