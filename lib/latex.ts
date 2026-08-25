@@ -8,6 +8,11 @@ const DISPLAY_ENVIRONMENTS = new Set([
   "gather",
   "gather*",
   "gathered",
+  "multline",
+  "multline*",
+  "split",
+  "eqnarray",
+  "eqnarray*",
   "cases",
   "matrix",
   "pmatrix",
@@ -16,6 +21,8 @@ const DISPLAY_ENVIRONMENTS = new Set([
   "vmatrix",
   "Vmatrix",
   "smallmatrix",
+  "subarray",
+  "CD",
   "array",
 ]);
 

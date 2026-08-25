@@ -305,6 +305,44 @@ aside {
   white-space: pre-wrap;
 }
 
+.math-svg-renderer {
+  display: inline-block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin-inline: 0.08em;
+  padding-inline: 0.1rem;
+  color: #292524;
+  vertical-align: middle;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+}
+
+.math-svg-renderer[data-display="true"] {
+  display: block;
+  margin: 1rem 0;
+  padding: 0.75rem 0.25rem;
+}
+
+.math-svg-renderer img {
+  display: block;
+  width: auto;
+  max-width: none;
+  height: auto;
+  margin-inline: auto;
+}
+
+.math-svg-status {
+  color: #78716c;
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: 0.9em;
+}
+
+.math-content-compact .math-svg-renderer[data-display="true"] {
+  margin: 0.45rem 0;
+  padding-block: 0.35rem;
+}
+
 .math-render-error {
   color: #be123c;
   font-family: var(--font-geist-sans), sans-serif;

@@ -1,8 +1,9 @@
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
+import { MathSvgRenderer } from "@/components/math/math-svg-renderer";
 import { normalizeLatexDelimiters } from "@/lib/latex";
 import { cn } from "@/lib/utils";
 
@@ -12,29 +13,113 @@ const KATEX_ERROR_COLOR = "#ff00fe";
 type MathTreeNode = {
   type?: string;
   value?: string;
+  tagName?: string;
   properties?: Record<string, unknown>;
   children?: MathTreeNode[];
 };
 
-function rehypeHideInvalidLatex() {
-  return (tree: MathTreeNode) => {
-    const getClassNames = (node: MathTreeNode) => {
-      const className = node.properties?.className;
-      return Array.isArray(className) ? className.map(String) : String(className ?? "").split(/\s+/);
-    };
+function getClassNames(node: MathTreeNode) {
+  const className = node.properties?.className;
+  return Array.isArray(className) ? className.map(String) : String(className ?? "").split(/\s+/);
+}
 
-    const containsKatexError = (node: MathTreeNode): boolean => {
-      if (getClassNames(node).includes("katex-error")) {
-        return true;
+function containsKatexError(node: MathTreeNode): boolean {
+  if (getClassNames(node).includes("katex-error")) {
+    return true;
+  }
+
+  const hasErrorColor = Object.values(node.properties ?? {}).some((value) =>
+    String(value).toLowerCase().includes(KATEX_ERROR_COLOR),
+  );
+
+  return hasErrorColor || Boolean(node.children?.some(containsKatexError));
+}
+
+/**
+ * Some extensions have to bypass KaTeX entirely. Their TeX payload is copied
+ * unchanged and rendered by the MathJax/XyJax server fallback.
+ */
+function rehypeExtractMathJaxExtensions() {
+  return (tree: MathTreeNode) => {
+    const visit = (node: MathTreeNode) => {
+      const classNames = getClassNames(node);
+      const isMathNode = classNames.includes("math-inline") || classNames.includes("math-display");
+      const latex = node.children
+        ?.filter((child) => child.type === "text")
+        .map((child) => child.value ?? "")
+        .join("");
+
+      if (isMathNode && latex?.includes("\\xymatrix")) {
+        node.type = "element";
+        node.tagName = "math-svg";
+        node.properties = {
+          // XY-pic diagrams need their own scrollable row even when an author
+          // used single-dollar delimiters around the command.
+          display: "true",
+        };
+        node.children = [{ type: "text", value: latex }];
+        return;
       }
 
-      const hasErrorColor = Object.values(node.properties ?? {}).some((value) =>
-        String(value).toLowerCase().includes(KATEX_ERROR_COLOR),
-      );
-
-      return hasErrorColor || Boolean(node.children?.some(containsKatexError));
+      node.children?.forEach(visit);
     };
 
+    visit(tree);
+  };
+}
+
+/**
+ * A KaTeX parse error may still be valid MathJax LaTeX. Route the untouched
+ * expression to the broader server renderer before showing a final error.
+ */
+function rehypeFallbackForUnsupportedKatex() {
+  return (tree: MathTreeNode) => {
+    const textContent = (node: MathTreeNode): string =>
+      node.type === "text" ? node.value ?? "" : node.children?.map(textContent).join("") ?? "";
+
+    const findLatexAnnotation = (node: MathTreeNode): string | undefined => {
+      if (node.tagName === "annotation" && node.properties?.encoding === "application/x-tex") {
+        return textContent(node);
+      }
+
+      for (const child of node.children ?? []) {
+        const annotation = findLatexAnnotation(child);
+        if (annotation !== undefined) {
+          return annotation;
+        }
+      }
+
+      return undefined;
+    };
+
+    const visit = (node: MathTreeNode, parent?: MathTreeNode) => {
+      const classNames = getClassNames(node);
+      const isKatexError =
+        classNames.includes("katex-error") || (classNames.includes("katex") && containsKatexError(node));
+
+      if (isKatexError) {
+        const latex = findLatexAnnotation(node) ?? textContent(node);
+
+        node.type = "element";
+        node.tagName = "math-svg";
+        node.properties = {
+          // Inline math is normally inside a paragraph. Flow math is a direct
+          // child of the root, a list item, a quote, or another block element.
+          display: parent?.tagName === "p" ? "false" : "true",
+        };
+        node.children = [{ type: "text", value: latex }];
+        return;
+      }
+
+      node.children?.forEach((child) => visit(child, node));
+    };
+
+    visit(tree);
+  };
+}
+
+function rehypeHideInvalidLatex() {
+  return (tree: MathTreeNode) => {
     const replaceWithSafeError = (node: MathTreeNode) => {
       node.properties = {
         ...node.properties,
@@ -62,6 +147,7 @@ function rehypeHideInvalidLatex() {
 }
 
 const rehypePlugins: NonNullable<ComponentProps<typeof ReactMarkdown>["rehypePlugins"]> = [
+  rehypeExtractMathJaxExtensions,
   [
     rehypeKatex,
     {
@@ -74,6 +160,11 @@ const rehypePlugins: NonNullable<ComponentProps<typeof ReactMarkdown>["rehypePlu
         // the submitted LaTeX source unchanged. Authors can still use \tfrac
         // when they intentionally want a compact inline fraction.
         "\\frac": "\\dfrac{#1}{#2}",
+        "\\R": "\\mathbb{R}",
+        "\\N": "\\mathbb{N}",
+        "\\Z": "\\mathbb{Z}",
+        "\\Q": "\\mathbb{Q}",
+        "\\C": "\\mathbb{C}",
         "\\RR": "\\mathbb{R}",
         "\\NN": "\\mathbb{N}",
         "\\ZZ": "\\mathbb{Z}",
@@ -82,10 +173,23 @@ const rehypePlugins: NonNullable<ComponentProps<typeof ReactMarkdown>["rehypePlu
       },
     },
   ],
+  rehypeFallbackForUnsupportedKatex,
   rehypeHideInvalidLatex,
 ];
 
+type MathSvgComponentProps = {
+  children?: ReactNode;
+  display?: string;
+};
+
+const mathSvgComponents = {
+  "math-svg": ({ children, display }: MathSvgComponentProps) => (
+    <MathSvgRenderer latex={String(children ?? "")} display={display === "true"} />
+  ),
+} as unknown as NonNullable<ComponentProps<typeof ReactMarkdown>["components"]>;
+
 const inlineComponents: NonNullable<ComponentProps<typeof ReactMarkdown>["components"]> = {
+  ...mathSvgComponents,
   p: ({ children }) => <>{children}</>,
   a: ({ children }) => <>{children}</>,
 };
@@ -103,7 +207,7 @@ export function MathRenderer({ content, variant = "body", className }: MathRende
     <ReactMarkdown
       remarkPlugins={remarkPlugins}
       rehypePlugins={rehypePlugins}
-      components={isInlineLayout ? inlineComponents : undefined}
+      components={isInlineLayout ? inlineComponents : mathSvgComponents}
       skipHtml
     >
       {normalizedContent}

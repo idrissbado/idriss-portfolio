@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { POST as renderMathSvg } from "@/app/api/math/render/route";
 import { MathRenderer } from "@/components/math/math-renderer";
 import { normalizeLatexDelimiters } from "@/lib/latex";
 
@@ -20,6 +21,19 @@ const POWERED_DENOMINATORS = [
   String.raw`x^{6n-1}+\frac{1}{x^{6n-1}}`,
   String.raw`x^{6n\pm1}+\frac{1}{x^{6n\pm1}}`,
   String.raw`\frac{1}{x^{a+b+c}}`,
+];
+
+const REPORTED_XY_MATRIX = String.raw`\xymatrix {& & &(1,1,1,1)\ar[d]^{f,g,h}&&&\\&&&(1,1,1,3)\ar[d]^{f,g,h}&&&\\&&&(1,1,3,11)\ar[lld]^h \ar[rrd]^{f,g}&&&\\ &(1,1,11,41)\ar[ld]^h\ar[rd]^{f,g}&&&& (1,3,11,131)\ar[ld]^h\ar[d]^g\ar[rd]^f\\(1,1,41,153)&&(1,11,41,1803)&&(1,3,131,1561)&(1,11,131,5761)&(3,11,131,17291) }`;
+
+const MATRIX_ENVIRONMENTS = [
+  String.raw`\begin{matrix}a&b\\c&d\end{matrix}`,
+  String.raw`\begin{pmatrix}a&b\\c&d\end{pmatrix}`,
+  String.raw`\begin{bmatrix}a&b\\c&d\end{bmatrix}`,
+  String.raw`\begin{Bmatrix}a&b\\c&d\end{Bmatrix}`,
+  String.raw`\begin{vmatrix}a&b\\c&d\end{vmatrix}`,
+  String.raw`\begin{Vmatrix}a&b\\c&d\end{Vmatrix}`,
+  String.raw`\begin{array}{cc}a&b\\c&d\end{array}`,
+  String.raw`\begin{cases}x^2,&x\geq0\\-x,&x<0\end{cases}`,
 ];
 
 function renderMath(content: string, variant: "body" | "compact" | "inline" | "title" = "body") {
@@ -70,6 +84,17 @@ describe("LaTeX delimiter normalization", () => {
     expect(normalized).toContain("$$");
     expect(normalized).toContain(latex);
   });
+
+  it.each(["multline", "multline*", "split", "eqnarray", "eqnarray*", "subarray", "CD"])(
+    "recognizes the standalone %s environment",
+    (environment) => {
+      const latex = `\\begin{${environment}}a=b\\end{${environment}}`;
+      const normalized = normalizeLatexDelimiters(latex);
+
+      expect(normalized).toContain("$$");
+      expect(normalized).toContain(latex);
+    },
+  );
 
   it("does not double-wrap environments already inside math delimiters", () => {
     const latex = String.raw`$$
@@ -145,6 +170,32 @@ B&=\begin{cases}x,&x\geq0\\-x,&x<0\end{cases}
     expect(html).not.toContain("katex-error");
   });
 
+  it.each(MATRIX_ENVIRONMENTS)("renders the matrix or piecewise environment %s", (environment) => {
+    const html = renderMath(`$$${environment}$$`);
+
+    expect(html).toContain('class="mtable"');
+    expect(html).not.toContain("katex-error");
+    expect(html).not.toContain("math-svg-renderer");
+  });
+
+  it("renders the main classes of mathematical notation", () => {
+    const content = String.raw`
+$a_{n_k}^{m+1},\quad \sqrt[n]{x},\quad \binom{n}{k},\quad \left\langle x,y\right\rangle$
+
+$$\int_0^\infty e^{-x^2}\,dx+\sum_{k=1}^n k+\prod_{j=1}^m j+\lim_{x\to0}\frac{\sin x}{x}$$
+
+$\forall x\in\R,\ \exists n\in\N:\ x\leq n\Rightarrow x\in\C\iff x\in\Q\cup\Z$
+
+$\vec v,\ \hat x,\ \overline{AB},\ \underbrace{x+\cdots+x}_{n\text{ terms}},\ \mathcal F,\ \mathbf A,\ \operatorname{rank}(A)$`;
+    const html = renderMath(content);
+
+    expect(html).toContain("class=\"katex\"");
+    expect(html).toContain("class=\"mfrac\"");
+    expect(html).toContain("<mroot>");
+    expect(html).not.toContain("katex-error");
+    expect(html).not.toContain("math-svg-renderer");
+  });
+
   it("renders all supported inline and display delimiter forms", () => {
     const expression = String.raw`x^{6n+1}+\frac{1}{x^{6n+1}}`;
     const inlineDollar = renderMath(`$${expression}$`);
@@ -201,10 +252,90 @@ B&=\begin{cases}x,&x\geq0\\-x,&x<0\end{cases}
     expect(layout.indexOf('import "katex/dist/katex.min.css"')).toBeLessThan(layout.indexOf('import "./globals.css"'));
   });
 
-  it("replaces invalid LaTeX with a readable error instead of raw commands", () => {
+  it("routes an unknown KaTeX command to the broader renderer without showing raw commands", () => {
     const html = renderMath(String.raw`$\notARealCommand{x}$`);
 
-    expect(html).toContain("Equation could not be rendered.");
+    expect(html).toContain("math-svg-renderer");
+    expect(html).toContain('data-display="false"');
+    expect(html).toContain("Rendering equation");
     expect(html).not.toContain("\\notARealCommand");
+    expect(html).not.toContain("katex-error");
+  });
+});
+
+describe("MathJax and XY-pic fallback rendering", () => {
+  it("routes valid MathJax notation that KaTeX does not support", () => {
+    const inline = renderMath(String.raw`A boxed value $\bbox[4px,border:1px solid]{x+y}$ is shown.`);
+    const display = renderMath(String.raw`\begin{multline}a+b+c\\=d\end{multline}`);
+
+    expect(inline).toContain('class="math-svg-renderer"');
+    expect(inline).toContain('data-display="false"');
+    expect(display).toContain('class="math-svg-renderer"');
+    expect(display).toContain('data-display="true"');
+    expect(inline).not.toContain("katex-error");
+    expect(display).not.toContain("katex-error");
+  });
+
+  it("routes xymatrix source around KaTeX without changing the submitted expression", () => {
+    const html = renderMath(`$${REPORTED_XY_MATRIX}$`);
+
+    expect(html).toContain("math-svg-renderer");
+    expect(html).toContain('data-display="true"');
+    expect(html).toContain("Rendering equation");
+    expect(html).not.toContain("Equation could not be rendered.");
+    expect(html).not.toContain("katex-error");
+  });
+
+  it("renders the exact reported infinite-tree branches as an XyJax SVG", async () => {
+    const request = new Request("http://localhost/api/math/render", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ latex: REPORTED_XY_MATRIX, display: true }),
+    });
+    const response = await renderMathSvg(request);
+    const svg = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("image/svg+xml");
+    expect(svg).toMatch(/^<svg\b/);
+    expect(svg).toContain('data-mml-node="xypic"');
+    expect(svg).toContain("</svg>");
+    expect(svg).not.toContain('data-mml-node="merror"');
+  });
+
+  it("renders a non-KaTeX MathJax command as SVG", async () => {
+    const request = new Request("http://localhost/api/math/render", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ latex: String.raw`\bbox[4px,border:1px solid]{x+y}`, display: false }),
+    });
+    const response = await renderMathSvg(request);
+    const svg = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(svg).toMatch(/^<svg\b/);
+    expect(svg).not.toContain('data-mml-node="merror"');
+  });
+
+  it("rejects non-mathematical file commands", async () => {
+    const request = new Request("http://localhost/api/math/render", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ latex: String.raw`\input{private-file}`, display: true }),
+    });
+    const response = await renderMathSvg(request);
+
+    expect(response.status).toBe(400);
+  });
+
+  it("returns a controlled error when neither renderer understands the expression", async () => {
+    const request = new Request("http://localhost/api/math/render", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ latex: String.raw`\notARealCommand{x}`, display: false }),
+    });
+    const response = await renderMathSvg(request);
+
+    expect(response.status).toBe(422);
   });
 });

@@ -24,6 +24,7 @@
     "clsx": "^2.1.1",
     "katex": "^0.18.4",
     "lucide-react": "^1.33.0",
+    "mathxyjax3": "^0.8.3",
     "next": "16.3.1",
     "next-auth": "^4.24.15",
     "pdfkit": "^0.19.1",
