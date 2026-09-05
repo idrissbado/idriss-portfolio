@@ -111,14 +111,20 @@ async function callOpenAiCompatible(apiKey: string, endpoint: string, model: str
   });
   const payload = (await response.json()) as {
     error?: { message?: unknown; type?: unknown; code?: unknown };
-    choices?: unknown;
+    choices?: Array<{ finish_reason?: unknown }>;
   };
   if (!response.ok) {
     const providerMessage = typeof payload.error?.message === "string" ? payload.error.message : "Unknown provider error.";
     console.error("Groq provider error:", { status: response.status, model, message: providerMessage });
     throw new ProviderError(response.status, providerMessage);
   }
-  return extractAssistantText(payload);
+  const result = extractAssistantText(payload);
+  if (!result) {
+    const finishReason = String(payload.choices?.[0]?.finish_reason ?? "unknown");
+    throw new ProviderError(502, `Groq returned no text (finish_reason: ${finishReason}).`);
+  }
+
+  return result;
 }
 
 export async function POST(request: Request) {
@@ -165,20 +171,20 @@ export async function POST(request: Request) {
       try {
         result = await callOpenAiCompatible(groqApiKey, process.env.GROQ_API_URL || DEFAULT_GROQ_ENDPOINT, groqModel, prompt, imageDataUrl);
       } catch (initialError) {
-        if (!(initialError instanceof ProviderError) || initialError.status !== 404) throw initialError;
+        if (!(initialError instanceof ProviderError) || ![404, 502].includes(initialError.status)) throw initialError;
       }
     } else if (geminiApiKey) {
       result = await callGemini(geminiApiKey, process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL, prompt, imageDataUrl);
     }
 
-    if (groqApiKey && imageDataUrl && !result) {
+    if (groqApiKey && !result) {
       for (const fallbackModel of GROQ_VISION_FALLBACKS) {
         if (fallbackModel === groqModel) continue;
         try {
           result = await callOpenAiCompatible(groqApiKey, process.env.GROQ_API_URL || DEFAULT_GROQ_ENDPOINT, fallbackModel, prompt, imageDataUrl);
           if (result) break;
         } catch (fallbackError) {
-          if (!(fallbackError instanceof ProviderError) || fallbackError.status !== 404) throw fallbackError;
+          if (!(fallbackError instanceof ProviderError) || ![404, 502].includes(fallbackError.status)) throw fallbackError;
         }
       }
     }
