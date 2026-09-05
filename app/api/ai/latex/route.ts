@@ -5,19 +5,36 @@ export const runtime = "nodejs";
 const MAX_PROMPT_LENGTH = 8_000;
 const MAX_IMAGE_LENGTH = 9_000_000;
 const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash";
-const DEFAULT_GROQ_MODEL = "meta-llama/llama-4-maverick-17b-128e-instruct";
-const RETIRED_GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
+const DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile";
 const DEFAULT_GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_VISION_FALLBACKS = [
-  "meta-llama/llama-4-scout-17b-16e-instruct",
-  "meta-llama/llama-4-maverick-17b-128e-instruct",
-  "llama-3.2-11b-vision-preview",
-] as const;
 
 class ProviderError extends Error {
   constructor(public readonly status: number, message: string) {
     super(message);
   }
+}
+
+async function findAccessibleGroqModels(apiKey: string, endpoint: string, preferredModel: string, needsVision: boolean) {
+  const modelsEndpoint = new URL(endpoint).origin + "/openai/v1/models";
+  const response = await fetch(modelsEndpoint, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+
+  if (!response.ok) {
+    return [preferredModel];
+  }
+
+  const payload = (await response.json()) as { data?: Array<{ id?: unknown; active?: unknown }> };
+  const available = (payload.data ?? [])
+    .filter((model) => model.active !== false && typeof model.id === "string")
+    .map((model) => model.id as string);
+
+  if (!needsVision) {
+    return [preferredModel, ...available.filter((model) => model !== preferredModel)];
+  }
+
+  const visionCandidates = available.filter((model) => /vision|vl|scout|maverick/i.test(model));
+  return [preferredModel, ...visionCandidates.filter((model) => model !== preferredModel)];
 }
 
 function jsonError(message: string, status: number) {
@@ -164,32 +181,32 @@ export async function POST(request: Request) {
 
   try {
     const configuredGroqModel = process.env.GROQ_MODEL || DEFAULT_GROQ_MODEL;
-    const groqModel = configuredGroqModel === RETIRED_GROQ_MODEL ? DEFAULT_GROQ_MODEL : configuredGroqModel;
     let result = "";
 
     if (groqApiKey) {
-      try {
-        result = await callOpenAiCompatible(groqApiKey, process.env.GROQ_API_URL || DEFAULT_GROQ_ENDPOINT, groqModel, prompt, imageDataUrl);
-      } catch (initialError) {
-        if (!(initialError instanceof ProviderError) || ![404, 502].includes(initialError.status)) throw initialError;
+      const groqEndpoint = process.env.GROQ_API_URL || DEFAULT_GROQ_ENDPOINT;
+      const models = await findAccessibleGroqModels(groqApiKey, groqEndpoint, configuredGroqModel, Boolean(imageDataUrl));
+      let lastProviderError: unknown;
+
+      for (const model of models) {
+        try {
+          result = await callOpenAiCompatible(groqApiKey, groqEndpoint, model, prompt, imageDataUrl);
+          if (result) break;
+        } catch (providerError) {
+          lastProviderError = providerError;
+          if (!(providerError instanceof ProviderError) || ![404, 502].includes(providerError.status)) throw providerError;
+        }
+      }
+
+      if (!result && lastProviderError instanceof Error) {
+        throw lastProviderError;
       }
     } else if (geminiApiKey) {
       result = await callGemini(geminiApiKey, process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL, prompt, imageDataUrl);
     }
 
-    if (groqApiKey && !result) {
-      for (const fallbackModel of GROQ_VISION_FALLBACKS) {
-        if (fallbackModel === groqModel) continue;
-        try {
-          result = await callOpenAiCompatible(groqApiKey, process.env.GROQ_API_URL || DEFAULT_GROQ_ENDPOINT, fallbackModel, prompt, imageDataUrl);
-          if (result) break;
-        } catch (fallbackError) {
-          if (!(fallbackError instanceof ProviderError) || ![404, 502].includes(fallbackError.status)) throw fallbackError;
-        }
-      }
-    }
     if (!result) {
-      return jsonError("The AI provider returned an empty result.", 502);
+      return jsonError("No accessible Groq model returned a result.", 502);
     }
 
     return Response.json({ result, latex: extractLatex(result) });
