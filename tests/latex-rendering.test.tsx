@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { POST as renderMathSvg } from "@/app/api/math/render/route";
 import { MathRenderer } from "@/components/math/math-renderer";
-import { prepareLatexDocument } from "@/lib/latex-document";
+import { createLatexExcerpt, prepareLatexDocument } from "@/lib/latex-document";
 import { normalizeLatexDelimiters } from "@/lib/latex";
 
 const REQUIRED_INLINE_CASES = [
@@ -213,6 +213,41 @@ $a_n$ & $n^2$\\
     ].join("\n");
 
     expect(prepareLatexDocument(example).content).toBe(example);
+  });
+
+  it("never truncates a forum preview inside a LaTeX expression", () => {
+    const introduction = "This introductory sentence explains the mathematical question clearly. ".repeat(3);
+    const expression = String.raw`$$x^{6n+1}+\frac{1}{x^{6n+1}}=S_{6n+1}$$`;
+    const content = `${introduction}${expression} More details follow after the equation.`;
+    const excerpt = createLatexExcerpt(content, 180);
+    const html = renderMath(excerpt, "compact");
+
+    expect(excerpt).not.toContain("$x^{6n");
+    expect(excerpt).toMatch(/…$/);
+    expect(html).not.toContain("Equation could not be rendered.");
+    expect(html).not.toContain("katex-error");
+  });
+
+  it("keeps a complete equation and document macros when they fit in the preview", () => {
+    const document = String.raw`\documentclass{article}
+\newcommand{\Seq}{S_{6n+1}}
+\begin{document}
+Compute $\Seq=x^{6n+1}+\frac{1}{x^{6n+1}}$ and then provide a detailed proof that continues for many paragraphs.
+\end{document}`;
+    const excerpt = createLatexExcerpt(document, 105);
+    const html = renderMath(excerpt, "compact");
+
+    expect(excerpt).toContain(String.raw`\newcommand{\Seq}`);
+    expect(excerpt).toContain(String.raw`$\Seq=x^{6n+1}+\frac{1}{x^{6n+1}}$`);
+    expect(firstMathMlFraction(html)).toContain("</msup></mfrac>");
+    expect(html).not.toContain("Equation could not be rendered.");
+  });
+
+  it("uses the complete topic content instead of a previously broken stored excerpt", () => {
+    const forumPage = readFileSync(path.resolve(__dirname, "../components/forum/forum-page-client.tsx"), "utf8");
+
+    expect(forumPage).toContain("createLatexExcerpt(topic.content)");
+    expect(forumPage).not.toContain("topic.content.slice(0, 180)");
   });
 });
 

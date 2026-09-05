@@ -6,6 +6,7 @@ type MathSvgRendererProps = {
   latex: string;
   display?: boolean;
   macros?: Record<string, string>;
+  showError?: boolean;
 };
 
 type RenderState =
@@ -13,7 +14,7 @@ type RenderState =
   | { status: "ready"; url: string }
   | { status: "error" };
 
-export function MathSvgRenderer({ latex, display = true, macros = {} }: MathSvgRendererProps) {
+export function MathSvgRenderer({ latex, display = true, macros = {}, showError = true }: MathSvgRendererProps) {
   const [state, setState] = useState<RenderState>({ status: "loading" });
   const requestBody = JSON.stringify({ latex, display, macros });
 
@@ -66,7 +67,7 @@ export function MathSvgRenderer({ latex, display = true, macros = {} }: MathSvgR
           Rendering equation…
         </span>
       ) : null}
-      {state.status === "error" ? (
+      {state.status === "error" && showError ? (
         <span className="math-render-error" role="status">
           Equation could not be rendered.
         </span>

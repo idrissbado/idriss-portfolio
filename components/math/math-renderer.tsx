@@ -119,9 +119,18 @@ function rehypeFallbackForUnsupportedKatex() {
   };
 }
 
-function rehypeHideInvalidLatex() {
+function rehypeHideInvalidLatex(suppressErrors = false) {
   return (tree: MathTreeNode) => {
     const replaceWithSafeError = (node: MathTreeNode) => {
+      if (suppressErrors) {
+        node.type = "text";
+        node.value = "";
+        delete node.tagName;
+        delete node.properties;
+        node.children = [];
+        return;
+      }
+
       node.properties = {
         ...node.properties,
         "aria-label": "Invalid mathematical expression",
@@ -163,7 +172,7 @@ const DEFAULT_MACROS: Record<string, string> = {
   "\\CC": "\\mathbb{C}",
 };
 
-function createRehypePlugins(macros: Record<string, string>) {
+function createRehypePlugins(macros: Record<string, string>, suppressErrors: boolean) {
   return [
     rehypeExtractMathJaxExtensions,
     [
@@ -177,7 +186,7 @@ function createRehypePlugins(macros: Record<string, string>) {
       },
     ],
     rehypeFallbackForUnsupportedKatex,
-    rehypeHideInvalidLatex,
+    () => rehypeHideInvalidLatex(suppressErrors),
   ] as NonNullable<ComponentProps<typeof ReactMarkdown>["rehypePlugins"]>;
 }
 
@@ -186,10 +195,15 @@ type MathSvgComponentProps = {
   display?: string;
 };
 
-function createMathSvgComponents(macros: Record<string, string>) {
+function createMathSvgComponents(macros: Record<string, string>, suppressErrors: boolean) {
   return {
     "math-svg": ({ children, display }: MathSvgComponentProps) => (
-      <MathSvgRenderer latex={String(children ?? "")} display={display === "true"} macros={macros} />
+      <MathSvgRenderer
+        latex={String(children ?? "")}
+        display={display === "true"}
+        macros={macros}
+        showError={!suppressErrors}
+      />
     ),
   } as unknown as NonNullable<ComponentProps<typeof ReactMarkdown>["components"]>;
 }
@@ -202,10 +216,11 @@ type MathRendererProps = {
 
 export function MathRenderer({ content, variant = "body", className }: MathRendererProps) {
   const isInlineLayout = variant === "inline" || variant === "title";
+  const suppressErrors = variant === "compact";
   const preparedDocument = prepareLatexDocument(content);
   const macros = { ...DEFAULT_MACROS, ...preparedDocument.macros };
   const normalizedContent = normalizeLatexDelimiters(preparedDocument.content, { inlineOnly: isInlineLayout });
-  const mathSvgComponents = createMathSvgComponents(macros);
+  const mathSvgComponents = createMathSvgComponents(macros, suppressErrors);
   const components = isInlineLayout
     ? {
         ...mathSvgComponents,
@@ -216,7 +231,7 @@ export function MathRenderer({ content, variant = "body", className }: MathRende
   const markdown = (
     <ReactMarkdown
       remarkPlugins={remarkPlugins}
-      rehypePlugins={createRehypePlugins(macros)}
+      rehypePlugins={createRehypePlugins(macros, suppressErrors)}
       components={components}
       skipHtml
     >

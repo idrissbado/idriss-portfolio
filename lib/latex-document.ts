@@ -982,3 +982,113 @@ export function prepareLatexDocument(content: string): PreparedLatexDocument {
     macros: declarations.macros,
   };
 }
+
+type ExcerptProtectedSpan = {
+  complete: boolean;
+  end: number;
+};
+
+function readExcerptProtectedSpan(content: string, index: number): ExcerptProtectedSpan | null {
+  if (content[index] === "`" && !isEscaped(content, index)) {
+    let delimiterLength = 1;
+    while (content[index + delimiterLength] === "`") {
+      delimiterLength += 1;
+    }
+    const delimiter = "`".repeat(delimiterLength);
+    const closing = content.indexOf(delimiter, index + delimiterLength);
+    return closing === -1
+      ? { complete: false, end: index }
+      : { complete: true, end: closing + delimiterLength };
+  }
+
+  if (content[index] === "$" && !isEscaped(content, index)) {
+    const delimiter = content[index + 1] === "$" ? "$$" : "$";
+    const closing = findClosingDelimiter(content, index + delimiter.length, delimiter);
+    return closing === -1
+      ? { complete: false, end: index }
+      : { complete: true, end: closing + delimiter.length };
+  }
+
+  for (const [opening, closing] of [["\\(", "\\)"], ["\\[", "\\]"]] as const) {
+    if (content.startsWith(opening, index)) {
+      const closingIndex = findClosingDelimiter(content, index + opening.length, closing);
+      return closingIndex === -1
+        ? { complete: false, end: index }
+        : { complete: true, end: closingIndex + closing.length };
+    }
+  }
+
+  const openingEnvironment = readEnvironmentToken(content, index);
+  if (openingEnvironment?.kind === "begin" && isMathEnvironment(openingEnvironment.name)) {
+    const closingEnvironment = findMatchingEnvironment(content, openingEnvironment);
+    return closingEnvironment
+      ? { complete: true, end: closingEnvironment.end }
+      : { complete: false, end: index };
+  }
+
+  return null;
+}
+
+function macroDeclarationPrefix(macros: Record<string, string>) {
+  return Object.entries(macros)
+    .map(([name, definition]) => `\\newcommand{${name}}{${definition}}`)
+    .join("\n");
+}
+
+/**
+ * Builds a short forum-card preview without ever cutting through a math/code
+ * span. The complete question remains the source of truth, so older excerpts
+ * that were already truncated in the middle of LaTeX can be repaired at read
+ * time without changing database rows.
+ */
+export function createLatexExcerpt(content: string, maximumLength = 180) {
+  const prepared = prepareLatexDocument(content);
+  const source = prepared.content.trim();
+  const limit = Math.max(24, maximumLength);
+
+  if (source.length <= limit) {
+    return content.trim();
+  }
+
+  let cursor = 0;
+  let excerpt = "";
+  let lastSafeBreak = -1;
+
+  while (cursor < source.length && excerpt.length < limit) {
+    const protectedSpan = readExcerptProtectedSpan(source, cursor);
+    if (protectedSpan) {
+      if (!protectedSpan.complete) {
+        break;
+      }
+
+      const span = source.slice(cursor, protectedSpan.end);
+      if (excerpt.trim() && excerpt.length + span.length > limit) {
+        break;
+      }
+
+      excerpt += span;
+      cursor = protectedSpan.end;
+      lastSafeBreak = excerpt.length;
+      continue;
+    }
+
+    excerpt += source[cursor];
+    cursor += 1;
+    if (/\s|[.,;:!?]/.test(excerpt.at(-1) ?? "")) {
+      lastSafeBreak = excerpt.length;
+    }
+  }
+
+  if (cursor >= source.length) {
+    return content.trim();
+  }
+
+  if (lastSafeBreak >= Math.floor(limit * 0.55)) {
+    excerpt = excerpt.slice(0, lastSafeBreak);
+  }
+
+  const visibleExcerpt = excerpt.trimEnd();
+  const macroPrefix = macroDeclarationPrefix(prepared.macros);
+  const safeExcerpt = visibleExcerpt ? `${visibleExcerpt}…` : "…";
+  return macroPrefix ? `${macroPrefix}\n${safeExcerpt}` : safeExcerpt;
+}

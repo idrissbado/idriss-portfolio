@@ -8,6 +8,7 @@ import { useSession } from "next-auth/react";
 import { ForumAccountControl } from "@/components/forum/forum-account-control";
 import { MathRenderer } from "@/components/math/math-renderer";
 import type { CommunityStats, ForumTopic } from "@/lib/community-store";
+import { createLatexExcerpt } from "@/lib/latex-document";
 
 const defaultForm = {
   title: "",
@@ -838,7 +839,7 @@ export function ForumPageClient({
 
                           <div className="mt-3 text-sm leading-6 text-stone-600 dark:text-stone-300">
                             <MathRenderer
-                              content={topic.excerpt ?? `${topic.content.slice(0, 180)}${topic.content.length > 180 ? "..." : ""}`}
+                              content={createLatexExcerpt(topic.content)}
                               variant="compact"
                             />
                           </div>
