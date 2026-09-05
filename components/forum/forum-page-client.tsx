@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { ForumAccountControl } from "@/components/forum/forum-account-control";
+import { OpenPrismLatexAssistant } from "@/components/forum/openprism-latex-assistant";
 import { MathRenderer } from "@/components/math/math-renderer";
 import type { CommunityStats, ForumTopic } from "@/lib/community-store";
 import { createLatexExcerpt } from "@/lib/latex-document";
@@ -530,12 +531,7 @@ export function ForumPageClient({
               )}
 
               {activeNav === "ai-assist" && (
-                <div className="mt-4 rounded-2xl border border-stone-200 bg-stone-50 p-4 dark:border-stone-800 dark:bg-stone-950/60">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">AI research support</div>
-                  <p className="mt-2 text-sm leading-6 text-stone-600 dark:text-stone-300">
-                    The forum is ready for AI-assisted discovery, but it still needs real questions and answers to help the community learn.
-                  </p>
-                </div>
+                <OpenPrismLatexAssistant isAuthenticated={isAuthenticated} />
               )}
 
               <div className="mt-5 grid gap-3 sm:grid-cols-3">

@@ -160,6 +160,21 @@ describe("community features", () => {
     expect(content).toContain("Users");
   });
 
+  it("includes the OpenPrism-compatible image to LaTeX assistant", () => {
+    const assistantPath = path.resolve(__dirname, "../components/forum/openprism-latex-assistant.tsx");
+    const routePath = path.resolve(__dirname, "../app/api/ai/latex/route.ts");
+    const forumClientPath = path.resolve(__dirname, "../components/forum/forum-page-client.tsx");
+    const assistant = readFileSync(assistantPath, "utf8");
+    const route = readFileSync(routePath, "utf8");
+    const forumClient = readFileSync(forumClientPath, "utf8");
+
+    expect(assistant).toContain("Generate LaTeX");
+    expect(assistant).toContain("imageDataUrl");
+    expect(route).toContain("OPENPRISM_LLM_ENDPOINT");
+    expect(route).toContain("image_url");
+    expect(forumClient).toContain("OpenPrismLatexAssistant");
+  });
+
   it("does not ship placeholder forum topic data", () => {
     const storePath = path.resolve(__dirname, "../lib/community-store.ts");
     const content = readFileSync(storePath, "utf8");
