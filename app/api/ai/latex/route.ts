@@ -5,7 +5,8 @@ export const runtime = "nodejs";
 const MAX_PROMPT_LENGTH = 8_000;
 const MAX_IMAGE_LENGTH = 9_000_000;
 const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash";
-const DEFAULT_GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
+const DEFAULT_GROQ_MODEL = "meta-llama/llama-4-maverick-17b-128e-instruct";
+const RETIRED_GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 const DEFAULT_GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 
 function jsonError(message: string, status: number) {
@@ -145,11 +146,13 @@ export async function POST(request: Request) {
   }
 
   try {
+    const configuredGroqModel = process.env.GROQ_MODEL || DEFAULT_GROQ_MODEL;
+    const groqModel = configuredGroqModel === RETIRED_GROQ_MODEL ? DEFAULT_GROQ_MODEL : configuredGroqModel;
     const result = groqApiKey
       ? await callOpenAiCompatible(
           groqApiKey,
           process.env.GROQ_API_URL || DEFAULT_GROQ_ENDPOINT,
-          process.env.GROQ_MODEL || DEFAULT_GROQ_MODEL,
+          groqModel,
           prompt,
           imageDataUrl,
         )
