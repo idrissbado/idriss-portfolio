@@ -97,10 +97,14 @@ async function callOpenAiCompatible(apiKey: string, endpoint: string, model: str
       ],
     }),
   });
-  const payload = (await response.json()) as unknown;
+  const payload = (await response.json()) as {
+    error?: { message?: unknown; type?: unknown; code?: unknown };
+    choices?: unknown;
+  };
   if (!response.ok) {
-    console.error("OpenPrism provider error:", response.status);
-    throw new Error("The Groq-compatible provider request failed.");
+    const providerMessage = typeof payload.error?.message === "string" ? payload.error.message : "Unknown provider error.";
+    console.error("Groq provider error:", { status: response.status, model, message: providerMessage });
+    throw new Error(`Groq ${response.status}: ${providerMessage}`);
   }
   return extractAssistantText(payload);
 }
@@ -158,7 +162,7 @@ export async function POST(request: Request) {
 
     return Response.json({ result, latex: extractLatex(result) });
   } catch (error) {
-    console.error("Groq LaTeX request failed:", error);
-    return jsonError("Groq could not process the request. Check the GROQ_API_KEY and model settings.", 502);
+    const message = error instanceof Error ? error.message : "Unknown Groq error.";
+    return jsonError(message.slice(0, 300), 502);
   }
 }
