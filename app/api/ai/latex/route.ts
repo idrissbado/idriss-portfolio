@@ -8,6 +8,17 @@ const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash";
 const DEFAULT_GROQ_MODEL = "meta-llama/llama-4-maverick-17b-128e-instruct";
 const RETIRED_GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 const DEFAULT_GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
+const GROQ_VISION_FALLBACKS = [
+  "meta-llama/llama-4-scout-17b-16e-instruct",
+  "meta-llama/llama-4-maverick-17b-128e-instruct",
+  "llama-3.2-11b-vision-preview",
+] as const;
+
+class ProviderError extends Error {
+  constructor(public readonly status: number, message: string) {
+    super(message);
+  }
+}
 
 function jsonError(message: string, status: number) {
   return Response.json({ error: message }, { status });
@@ -105,7 +116,7 @@ async function callOpenAiCompatible(apiKey: string, endpoint: string, model: str
   if (!response.ok) {
     const providerMessage = typeof payload.error?.message === "string" ? payload.error.message : "Unknown provider error.";
     console.error("Groq provider error:", { status: response.status, model, message: providerMessage });
-    throw new Error(`Groq ${response.status}: ${providerMessage}`);
+    throw new ProviderError(response.status, providerMessage);
   }
   return extractAssistantText(payload);
 }
@@ -148,24 +159,38 @@ export async function POST(request: Request) {
   try {
     const configuredGroqModel = process.env.GROQ_MODEL || DEFAULT_GROQ_MODEL;
     const groqModel = configuredGroqModel === RETIRED_GROQ_MODEL ? DEFAULT_GROQ_MODEL : configuredGroqModel;
-    const result = groqApiKey
-      ? await callOpenAiCompatible(
-          groqApiKey,
-          process.env.GROQ_API_URL || DEFAULT_GROQ_ENDPOINT,
-          groqModel,
-          prompt,
-          imageDataUrl,
-        )
-      : geminiApiKey
-      ? await callGemini(geminiApiKey, process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL, prompt, imageDataUrl)
-      : "";
+    let result = "";
+
+    if (groqApiKey) {
+      try {
+        result = await callOpenAiCompatible(groqApiKey, process.env.GROQ_API_URL || DEFAULT_GROQ_ENDPOINT, groqModel, prompt, imageDataUrl);
+      } catch (initialError) {
+        if (!(initialError instanceof ProviderError) || initialError.status !== 404) throw initialError;
+      }
+    } else if (geminiApiKey) {
+      result = await callGemini(geminiApiKey, process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL, prompt, imageDataUrl);
+    }
+
+    if (groqApiKey && imageDataUrl && !result) {
+      for (const fallbackModel of GROQ_VISION_FALLBACKS) {
+        if (fallbackModel === groqModel) continue;
+        try {
+          result = await callOpenAiCompatible(groqApiKey, process.env.GROQ_API_URL || DEFAULT_GROQ_ENDPOINT, fallbackModel, prompt, imageDataUrl);
+          if (result) break;
+        } catch (fallbackError) {
+          if (!(fallbackError instanceof ProviderError) || fallbackError.status !== 404) throw fallbackError;
+        }
+      }
+    }
     if (!result) {
       return jsonError("The AI provider returned an empty result.", 502);
     }
 
     return Response.json({ result, latex: extractLatex(result) });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown Groq error.";
+    const message = error instanceof ProviderError && error.status === 404
+      ? "No accessible Groq vision model was found. Choose a vision model available in Groq Console or add GEMINI_API_KEY."
+      : error instanceof Error ? `Groq ${error.message}` : "Unknown Groq error.";
     return jsonError(message.slice(0, 300), 502);
   }
 }
