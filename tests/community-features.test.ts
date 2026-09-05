@@ -170,7 +170,8 @@ describe("community features", () => {
 
     expect(assistant).toContain("Generate LaTeX");
     expect(assistant).toContain("imageDataUrl");
-    expect(route).toContain("OPENPRISM_LLM_ENDPOINT");
+    expect(route).toContain("GROQ_API_KEY");
+    expect(route).not.toContain("OPENPRISM_LLM_API_KEY");
     expect(route).toContain("image_url");
     expect(forumClient).toContain("OpenPrismLatexAssistant");
   });

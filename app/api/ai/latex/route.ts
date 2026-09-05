@@ -6,8 +6,6 @@ const MAX_PROMPT_LENGTH = 8_000;
 const MAX_IMAGE_LENGTH = 9_000_000;
 const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash";
 const DEFAULT_GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
-const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
-const DEFAULT_OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
 const DEFAULT_GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 
 function jsonError(message: string, status: number) {
@@ -82,7 +80,7 @@ async function callGemini(apiKey: string, model: string, prompt: string, imageDa
   return payload.candidates?.[0]?.content?.parts?.map((part) => String(part.text ?? "")).join("\n").trim() ?? "";
 }
 
-async function callOpenAi(apiKey: string, endpoint: string, model: string, prompt: string, imageDataUrl: string) {
+async function callOpenAiCompatible(apiKey: string, endpoint: string, model: string, prompt: string, imageDataUrl: string) {
   const userContent = [
     { type: "text", text: createInstruction(prompt) },
     ...(imageDataUrl ? [{ type: "image_url", image_url: { url: imageDataUrl, detail: "high" } }] : []),
@@ -94,7 +92,7 @@ async function callOpenAi(apiKey: string, endpoint: string, model: string, promp
       model,
       temperature: 0.1,
       messages: [
-        { role: "system", content: "You are OpenPrism's mathematical LaTeX recognition assistant. Be exact, concise, and honest about uncertainty." },
+        { role: "system", content: "You are a mathematical LaTeX recognition assistant. Be exact, concise, and honest about uncertainty." },
         { role: "user", content: userContent },
       ],
     }),
@@ -102,7 +100,7 @@ async function callOpenAi(apiKey: string, endpoint: string, model: string, promp
   const payload = (await response.json()) as unknown;
   if (!response.ok) {
     console.error("OpenPrism provider error:", response.status);
-    throw new Error("OpenAI-compatible provider request failed.");
+    throw new Error("The Groq-compatible provider request failed.");
   }
   return extractAssistantText(payload);
 }
@@ -137,15 +135,14 @@ export async function POST(request: Request) {
 
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const groqApiKey = process.env.GROQ_API_KEY;
-  const openAiApiKey = process.env.OPENPRISM_LLM_API_KEY || process.env.OPENAI_API_KEY;
 
-  if (!groqApiKey && !geminiApiKey && !openAiApiKey) {
+  if (!groqApiKey && !geminiApiKey) {
     return jsonError("Configure GROQ_API_KEY in Vercel to enable the free AI assistant.", 503);
   }
 
   try {
     const result = groqApiKey
-      ? await callOpenAi(
+      ? await callOpenAiCompatible(
           groqApiKey,
           process.env.GROQ_API_URL || DEFAULT_GROQ_ENDPOINT,
           process.env.GROQ_MODEL || DEFAULT_GROQ_MODEL,
@@ -154,20 +151,14 @@ export async function POST(request: Request) {
         )
       : geminiApiKey
       ? await callGemini(geminiApiKey, process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL, prompt, imageDataUrl)
-      : await callOpenAi(
-          openAiApiKey!,
-          process.env.OPENPRISM_LLM_ENDPOINT || process.env.OPENAI_API_URL || DEFAULT_OPENAI_ENDPOINT,
-          process.env.OPENPRISM_LLM_MODEL || process.env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL,
-          prompt,
-          imageDataUrl,
-        );
+      : "";
     if (!result) {
       return jsonError("The AI provider returned an empty result.", 502);
     }
 
     return Response.json({ result, latex: extractLatex(result) });
   } catch (error) {
-    console.error("OpenPrism LaTeX request failed:", error);
-    return jsonError("The OpenPrism AI provider is temporarily unavailable.", 502);
+    console.error("Groq LaTeX request failed:", error);
+    return jsonError("Groq could not process the request. Check the GROQ_API_KEY and model settings.", 502);
   }
 }
