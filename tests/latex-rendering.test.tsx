@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { POST as renderMathSvg } from "@/app/api/math/render/route";
 import { MathRenderer } from "@/components/math/math-renderer";
+import { prepareLatexDocument } from "@/lib/latex-document";
 import { normalizeLatexDelimiters } from "@/lib/latex";
 
 const REQUIRED_INLINE_CASES = [
@@ -48,6 +49,31 @@ function firstMathMlFraction(html: string) {
   expect(end).toBeGreaterThan(start);
   return html.slice(start, end + "</mfrac>".length);
 }
+
+const COMPLETE_EXERCISE_DOCUMENT = String.raw`\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb,amsthm}
+\newtheorem{exercise}{Exercise}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Carlson}[1]{\sum_{k=1}^{#1} a_k}
+\title{A sharp Hardy-type inequality}
+\author{Forum member}
+\begin{document}
+\maketitle
+\section{The problem}
+\begin{exercise}[Inégalité de Carlson]
+Soit $(a_n)_{n\geq 1}$ une suite de réels positifs telle que
+\[
+\Carlson{n}\leq \sqrt{n\sum_{k=1}^{n}a_k^2}.
+\]
+\begin{enumerate}
+\item Établir l'inégalité.
+\item Étudier le cas d'égalité.
+\end{enumerate}
+\end{exercise}
+\begin{proof}
+Par Cauchy--Schwarz, le résultat suit.
+\end{proof}
+\end{document}`;
 
 describe("LaTeX delimiter normalization", () => {
   it("supports parenthesis and bracket delimiters", () => {
@@ -96,6 +122,14 @@ describe("LaTeX delimiter normalization", () => {
     },
   );
 
+  it("keeps the LaTeX math environment inline", () => {
+    const latex = String.raw`Text \begin{math}x+1\end{math} continues.`;
+    const normalized = normalizeLatexDelimiters(latex);
+
+    expect(normalized).toBe(String.raw`Text $\begin{math}x+1\end{math}$ continues.`);
+    expect(renderMath(latex)).not.toContain("katex-display");
+  });
+
   it("does not double-wrap environments already inside math delimiters", () => {
     const latex = String.raw`$$
 \begin{pmatrix}a&b\\c&d\end{pmatrix}
@@ -115,6 +149,70 @@ $$`;
     expect(normalized).toContain(second);
     expect(html.match(/class="katex-display"/g)).toHaveLength(2);
     expect(html).not.toContain("katex-error");
+  });
+});
+
+describe("complete LaTeX document import", () => {
+  it("accepts a document preamble and renders exercise, proof, headings, lists, and math", () => {
+    const prepared = prepareLatexDocument(COMPLETE_EXERCISE_DOCUMENT);
+    const html = renderMath(COMPLETE_EXERCISE_DOCUMENT);
+
+    expect(prepared.macros).toMatchObject({
+      "\\Carlson": String.raw`\sum_{k=1}^{#1} a_k`,
+      "\\R": String.raw`\mathbb{R}`,
+    });
+    expect(prepared.content).not.toContain("\\documentclass");
+    expect(prepared.content).not.toContain("\\begin{document}");
+    expect(prepared.content).not.toContain("\\begin{exercise}");
+    expect(html).toContain("A sharp Hardy-type inequality");
+    expect(html).toContain("Inégalité de Carlson");
+    expect(html).toContain("<blockquote>");
+    expect(html).toContain("<ol>");
+    expect(html).toContain('class="katex-display"');
+    expect(html).not.toContain("Equation could not be rendered.");
+    expect(html).not.toContain("katex-error");
+  });
+
+  it("accepts common theorem, table, bibliography, and matrix structures", () => {
+    const document = String.raw`\documentclass{article}
+\newtheorem{proposition}{Proposition}
+\begin{document}
+\begin{proposition}[Matrix identity]
+\[
+A=\begin{pmatrix}a&b\\c&d\end{pmatrix}
+\]
+\end{proposition}
+\begin{center}
+\begin{tabular}{cc}
+Name & Value\\
+$a_n$ & $n^2$\\
+\end{tabular}
+\end{center}
+\begin{thebibliography}{9}
+\bibitem{hardy} G. H. Hardy, \emph{Inequalities}.
+\end{thebibliography}
+\end{document}`;
+    const html = renderMath(document);
+
+    expect(html).toContain("Matrix identity");
+    expect(html).toContain('class="mtable"');
+    expect(html).toContain("<table>");
+    expect(html).toContain("References");
+    expect(html).toContain("Inequalities");
+    expect(html).not.toContain("Equation could not be rendered.");
+  });
+
+  it("does not interpret document commands shown inside fenced code", () => {
+    const example = [
+      "```latex",
+      String.raw`\documentclass{article}`,
+      String.raw`\begin{document}`,
+      "$x^2$",
+      String.raw`\end{document}`,
+      "```",
+    ].join("\n");
+
+    expect(prepareLatexDocument(example).content).toBe(example);
   });
 });
 
@@ -315,6 +413,59 @@ describe("MathJax and XY-pic fallback rendering", () => {
     expect(response.status).toBe(200);
     expect(svg).toMatch(/^<svg\b/);
     expect(svg).not.toContain('data-mml-node="merror"');
+  });
+
+  it("accepts equation labels commonly found in complete LaTeX documents", async () => {
+    const request = new Request("http://localhost/api/math/render", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        latex: String.raw`\begin{equation}x^2=1\label{eq:square}\end{equation}`,
+        display: true,
+      }),
+    });
+    const response = await renderMathSvg(request);
+    const svg = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(svg).toMatch(/^<svg\b/);
+    expect(svg).not.toContain('data-mml-node="merror"');
+  });
+
+  it("passes safe user-defined macros to the MathJax fallback", async () => {
+    const request = new Request("http://localhost/api/math/render", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        latex: String.raw`\bbox[4px,border:1px solid]{\DHL(k,2)}`,
+        display: true,
+        macros: { "\\DHL": String.raw`\operatorname{DHL}` },
+      }),
+    });
+    const response = await renderMathSvg(request);
+    const svg = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(svg).toMatch(/^<svg\b/);
+    expect(svg).toContain('data-c="44"');
+    expect(svg).toContain('data-c="48"');
+    expect(svg).toContain('data-c="4C"');
+    expect(svg).not.toContain('data-mml-node="merror"');
+  });
+
+  it("rejects unsafe commands hidden in user-defined macros", async () => {
+    const request = new Request("http://localhost/api/math/render", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        latex: String.raw`\unsafe`,
+        display: true,
+        macros: { "\\unsafe": String.raw`\input{private-file}` },
+      }),
+    });
+    const response = await renderMathSvg(request);
+
+    expect(response.status).toBe(400);
   });
 
   it("rejects non-mathematical file commands", async () => {

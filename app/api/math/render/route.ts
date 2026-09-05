@@ -5,6 +5,8 @@ export const runtime = "nodejs";
 
 const MAX_LATEX_LENGTH = 8_000;
 const MAX_CACHE_ENTRIES = 64;
+const MAX_MACROS = 64;
+const MAX_MACRO_DEFINITION_LENGTH = 2_000;
 const svgCache = new Map<string, string>();
 
 class InvalidLatexError extends Error {}
@@ -69,6 +71,48 @@ function rememberSvg(key: string, svg: string) {
   svgCache.set(key, svg);
 }
 
+function parseMacros(value: unknown) {
+  if (value === undefined) {
+    return {};
+  }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new InvalidLatexError("The macros option must be an object.");
+  }
+
+  const entries = Object.entries(value);
+  if (entries.length > MAX_MACROS) {
+    throw new InvalidLatexError("Too many LaTeX macros were supplied.");
+  }
+
+  const macros: Record<string, string> = {};
+  for (const [name, definition] of entries) {
+    if (!/^\\[A-Za-z@]+$/.test(name) || typeof definition !== "string") {
+      throw new InvalidLatexError("A LaTeX macro is invalid.");
+    }
+    if (definition.length > MAX_MACRO_DEFINITION_LENGTH) {
+      throw new InvalidLatexError("A LaTeX macro definition is too long.");
+    }
+    if (FORBIDDEN_COMMANDS.some((command) => definition.includes(command))) {
+      throw new InvalidLatexError("A LaTeX macro contains a forbidden command.");
+    }
+    macros[name] = definition;
+  }
+
+  return macros;
+}
+
+function macroPreamble(macros: Record<string, string>) {
+  return Object.entries(macros)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([name, definition]) => {
+      const parameters = [...definition.matchAll(/#([1-9])/g)].map((match) => Number(match[1]));
+      const arity = parameters.length > 0 ? Math.max(...parameters) : 0;
+      const signature = Array.from({ length: arity }, (_, index) => `#${index + 1}`).join("");
+      return `\\def${name}${signature}{${definition}}`;
+    })
+    .join("\n");
+}
+
 export async function POST(request: Request) {
   let payload: unknown;
 
@@ -81,6 +125,7 @@ export async function POST(request: Request) {
   const body = typeof payload === "object" && payload !== null ? payload : undefined;
   const latex = body && "latex" in body ? (body as { latex?: unknown }).latex : undefined;
   const display = body && "display" in body ? (body as { display?: unknown }).display : true;
+  const rawMacros = body && "macros" in body ? (body as { macros?: unknown }).macros : undefined;
 
   if (typeof latex !== "string" || !latex.trim()) {
     return jsonError("A LaTeX expression is required.", 400);
@@ -98,7 +143,17 @@ export async function POST(request: Request) {
     return jsonError("File, external-link, and active-HTML commands are not allowed.", 400);
   }
 
-  const cacheKey = createHash("sha256").update(`${display ? "1" : "0"}\0${latex}`).digest("hex");
+  let macros: Record<string, string>;
+  try {
+    macros = parseMacros(rawMacros);
+  } catch (error) {
+    return jsonError(error instanceof Error ? error.message : "The LaTeX macros are invalid.", 400);
+  }
+
+  const definitions = macroPreamble(macros);
+  const cacheKey = createHash("sha256")
+    .update(`${display ? "1" : "0"}\0${definitions}\0${latex}`)
+    .digest("hex");
   let svg = svgCache.get(cacheKey);
 
   try {
@@ -106,7 +161,7 @@ export async function POST(request: Request) {
       // The mathematical source reaches MathJax unchanged. Only its generated
       // HTML wrapper is removed so the resulting SVG can be served as an
       // isolated, non-interactive image.
-      svg = extractSvg(tex2svgHtml(latex, { display, em: 16, ex: 8 }));
+      svg = extractSvg(tex2svgHtml(`${definitions}\n${latex}`, { display, em: 16, ex: 8 }));
       rememberSvg(cacheKey, svg);
     }
   } catch (error) {

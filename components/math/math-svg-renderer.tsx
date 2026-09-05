@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 type MathSvgRendererProps = {
   latex: string;
   display?: boolean;
+  macros?: Record<string, string>;
 };
 
 type RenderState =
@@ -12,8 +13,9 @@ type RenderState =
   | { status: "ready"; url: string }
   | { status: "error" };
 
-export function MathSvgRenderer({ latex, display = true }: MathSvgRendererProps) {
+export function MathSvgRenderer({ latex, display = true, macros = {} }: MathSvgRendererProps) {
   const [state, setState] = useState<RenderState>({ status: "loading" });
+  const requestBody = JSON.stringify({ latex, display, macros });
 
   useEffect(() => {
     const controller = new AbortController();
@@ -26,7 +28,7 @@ export function MathSvgRenderer({ latex, display = true }: MathSvgRendererProps)
         const response = await fetch("/api/math/render", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ latex, display }),
+          body: requestBody,
           signal: controller.signal,
         });
 
@@ -55,7 +57,7 @@ export function MathSvgRenderer({ latex, display = true }: MathSvgRendererProps)
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [display, latex]);
+  }, [requestBody]);
 
   return (
     <span className="math-svg-renderer" data-display={display ? "true" : "false"}>

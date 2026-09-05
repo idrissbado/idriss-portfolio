@@ -1,30 +1,4 @@
-const DISPLAY_ENVIRONMENTS = new Set([
-  "equation",
-  "equation*",
-  "align",
-  "align*",
-  "aligned",
-  "alignedat",
-  "gather",
-  "gather*",
-  "gathered",
-  "multline",
-  "multline*",
-  "split",
-  "eqnarray",
-  "eqnarray*",
-  "cases",
-  "matrix",
-  "pmatrix",
-  "bmatrix",
-  "Bmatrix",
-  "vmatrix",
-  "Vmatrix",
-  "smallmatrix",
-  "subarray",
-  "CD",
-  "array",
-]);
+import { MATH_ENVIRONMENTS } from "@/lib/latex-environments";
 
 type LatexNormalizationOptions = {
   /** Keep every math expression inline, as required by question titles. */
@@ -70,7 +44,7 @@ function readEnvironmentToken(content: string, index: number): EnvironmentToken 
   }
 
   const name = content.slice(nameStart, nameEnd);
-  if (!DISPLAY_ENVIRONMENTS.has(name)) {
+  if (!MATH_ENVIRONMENTS.has(name)) {
     return null;
   }
 
@@ -329,7 +303,8 @@ function wrapStandaloneEnvironments(content: string, inlineOnly: boolean) {
         const environmentEnd = findEnvironmentEnd(content, opening);
         if (environmentEnd !== null) {
           const environment = content.slice(cursor, environmentEnd);
-          result += inlineOnly ? `$${environment}$` : `\n\n$$\n${environment}\n$$\n\n`;
+          const shouldRenderInline = inlineOnly || opening.name === "math";
+          result += shouldRenderInline ? `$${environment}$` : `\n\n$$\n${environment}\n$$\n\n`;
           cursor = environmentEnd;
           continue;
         }

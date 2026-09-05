@@ -4,6 +4,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import { MathSvgRenderer } from "@/components/math/math-svg-renderer";
+import { prepareLatexDocument } from "@/lib/latex-document";
 import { normalizeLatexDelimiters } from "@/lib/latex";
 import { cn } from "@/lib/utils";
 
@@ -146,53 +147,52 @@ function rehypeHideInvalidLatex() {
   };
 }
 
-const rehypePlugins: NonNullable<ComponentProps<typeof ReactMarkdown>["rehypePlugins"]> = [
-  rehypeExtractMathJaxExtensions,
-  [
-    rehypeKatex,
-    {
-      throwOnError: false,
-      errorColor: KATEX_ERROR_COLOR,
-      strict: "ignore",
-      trust: false,
-      macros: {
-        // Give forum fractions display-style vertical clearance while keeping
-        // the submitted LaTeX source unchanged. Authors can still use \tfrac
-        // when they intentionally want a compact inline fraction.
-        "\\frac": "\\dfrac{#1}{#2}",
-        "\\R": "\\mathbb{R}",
-        "\\N": "\\mathbb{N}",
-        "\\Z": "\\mathbb{Z}",
-        "\\Q": "\\mathbb{Q}",
-        "\\C": "\\mathbb{C}",
-        "\\RR": "\\mathbb{R}",
-        "\\NN": "\\mathbb{N}",
-        "\\ZZ": "\\mathbb{Z}",
-        "\\QQ": "\\mathbb{Q}",
-        "\\CC": "\\mathbb{C}",
+const DEFAULT_MACROS: Record<string, string> = {
+  // Give forum fractions display-style vertical clearance while keeping the
+  // submitted source unchanged. Authors can use \tfrac for compact fractions.
+  "\\frac": "\\dfrac{#1}{#2}",
+  "\\R": "\\mathbb{R}",
+  "\\N": "\\mathbb{N}",
+  "\\Z": "\\mathbb{Z}",
+  "\\Q": "\\mathbb{Q}",
+  "\\C": "\\mathbb{C}",
+  "\\RR": "\\mathbb{R}",
+  "\\NN": "\\mathbb{N}",
+  "\\ZZ": "\\mathbb{Z}",
+  "\\QQ": "\\mathbb{Q}",
+  "\\CC": "\\mathbb{C}",
+};
+
+function createRehypePlugins(macros: Record<string, string>) {
+  return [
+    rehypeExtractMathJaxExtensions,
+    [
+      rehypeKatex,
+      {
+        throwOnError: false,
+        errorColor: KATEX_ERROR_COLOR,
+        strict: "ignore",
+        trust: false,
+        macros,
       },
-    },
-  ],
-  rehypeFallbackForUnsupportedKatex,
-  rehypeHideInvalidLatex,
-];
+    ],
+    rehypeFallbackForUnsupportedKatex,
+    rehypeHideInvalidLatex,
+  ] as NonNullable<ComponentProps<typeof ReactMarkdown>["rehypePlugins"]>;
+}
 
 type MathSvgComponentProps = {
   children?: ReactNode;
   display?: string;
 };
 
-const mathSvgComponents = {
-  "math-svg": ({ children, display }: MathSvgComponentProps) => (
-    <MathSvgRenderer latex={String(children ?? "")} display={display === "true"} />
-  ),
-} as unknown as NonNullable<ComponentProps<typeof ReactMarkdown>["components"]>;
-
-const inlineComponents: NonNullable<ComponentProps<typeof ReactMarkdown>["components"]> = {
-  ...mathSvgComponents,
-  p: ({ children }) => <>{children}</>,
-  a: ({ children }) => <>{children}</>,
-};
+function createMathSvgComponents(macros: Record<string, string>) {
+  return {
+    "math-svg": ({ children, display }: MathSvgComponentProps) => (
+      <MathSvgRenderer latex={String(children ?? "")} display={display === "true"} macros={macros} />
+    ),
+  } as unknown as NonNullable<ComponentProps<typeof ReactMarkdown>["components"]>;
+}
 
 type MathRendererProps = {
   content: string;
@@ -202,12 +202,22 @@ type MathRendererProps = {
 
 export function MathRenderer({ content, variant = "body", className }: MathRendererProps) {
   const isInlineLayout = variant === "inline" || variant === "title";
-  const normalizedContent = normalizeLatexDelimiters(content, { inlineOnly: isInlineLayout });
+  const preparedDocument = prepareLatexDocument(content);
+  const macros = { ...DEFAULT_MACROS, ...preparedDocument.macros };
+  const normalizedContent = normalizeLatexDelimiters(preparedDocument.content, { inlineOnly: isInlineLayout });
+  const mathSvgComponents = createMathSvgComponents(macros);
+  const components = isInlineLayout
+    ? {
+        ...mathSvgComponents,
+        p: ({ children }: { children?: ReactNode }) => <>{children}</>,
+        a: ({ children }: { children?: ReactNode }) => <>{children}</>,
+      }
+    : mathSvgComponents;
   const markdown = (
     <ReactMarkdown
       remarkPlugins={remarkPlugins}
-      rehypePlugins={rehypePlugins}
-      components={isInlineLayout ? inlineComponents : mathSvgComponents}
+      rehypePlugins={createRehypePlugins(macros)}
+      components={components}
       skipHtml
     >
       {normalizedContent}
