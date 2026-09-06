@@ -188,7 +188,7 @@ describe("community features", () => {
     expect(assistant).toContain("onUseLatex");
     expect(forumClient).toContain("CommunityInbox");
     expect(messageRoute).toContain("sendDirectMessage");
-    expect(mentionRoute).toContain("ForumMention");
+    expect(mentionRoute).toContain("forumMention");
     expect(digestRoute).toContain("CRON_SECRET");
     expect(digest).toContain("English");
     expect(digest).toContain("Français");
