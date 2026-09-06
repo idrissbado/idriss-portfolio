@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { ForumAccountControl } from "@/components/forum/forum-account-control";
+import { CommunityInbox } from "@/components/forum/community-inbox";
 import { OpenPrismLatexAssistant } from "@/components/forum/openprism-latex-assistant";
 import { MathRenderer } from "@/components/math/math-renderer";
 import type { CommunityStats, ForumTopic } from "@/lib/community-store";
@@ -343,6 +344,19 @@ export function ForumPageClient({
     setActiveNav("questions");
   };
 
+  const useGeneratedLatex = (latex: string) => {
+    setForm((current) => ({
+      ...current,
+      title: current.title || "Exercise: generated mathematical expression",
+      category: current.category === "General" ? "Exercise" : current.category,
+      tags: current.tags || "exercise latex",
+      content: current.content ? `${current.content}\n\n${latex}` : latex,
+    }));
+    setShowComposer(true);
+    setActiveNav("questions");
+    window.requestAnimationFrame(() => document.getElementById("question-composer")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  };
+
   const hasActiveQuestionFilters = Boolean(search.trim() || selectedTag !== "all" || activeNav === "unanswered");
 
   return (
@@ -448,6 +462,7 @@ export function ForumPageClient({
                 </div>
               ) : null}
             </div>
+            <CommunityInbox isAuthenticated={isAuthenticated} />
           </aside>
 
           <main className="space-y-5">
@@ -531,7 +546,7 @@ export function ForumPageClient({
               )}
 
               {activeNav === "ai-assist" && (
-                <OpenPrismLatexAssistant isAuthenticated={isAuthenticated} />
+                <OpenPrismLatexAssistant isAuthenticated={isAuthenticated} onUseLatex={useGeneratedLatex} />
               )}
 
               <div className="mt-5 grid gap-3 sm:grid-cols-3">

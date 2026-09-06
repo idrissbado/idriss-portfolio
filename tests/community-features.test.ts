@@ -176,6 +176,26 @@ describe("community features", () => {
     expect(forumClient).toContain("OpenPrismLatexAssistant");
   });
 
+  it("supports generated LaTeX publishing, mentions, private inbox, and scheduled bilingual digests", () => {
+    const assistant = readFileSync(path.resolve(__dirname, "../components/forum/openprism-latex-assistant.tsx"), "utf8");
+    const forumClient = readFileSync(path.resolve(__dirname, "../components/forum/forum-page-client.tsx"), "utf8");
+    const messageRoute = readFileSync(path.resolve(__dirname, "../app/api/messages/route.ts"), "utf8");
+    const mentionRoute = readFileSync(path.resolve(__dirname, "../app/api/mentions/route.ts"), "utf8");
+    const digestRoute = readFileSync(path.resolve(__dirname, "../app/api/cron/community-digest/route.ts"), "utf8");
+    const digest = readFileSync(path.resolve(__dirname, "../lib/community-digest.ts"), "utf8");
+    const vercel = readFileSync(path.resolve(__dirname, "../vercel.json"), "utf8");
+
+    expect(assistant).toContain("onUseLatex");
+    expect(forumClient).toContain("CommunityInbox");
+    expect(messageRoute).toContain("sendDirectMessage");
+    expect(mentionRoute).toContain("ForumMention");
+    expect(digestRoute).toContain("CRON_SECRET");
+    expect(digest).toContain("English");
+    expect(digest).toContain("Français");
+    expect(vercel).toContain("community-digest?kind=daily");
+    expect(vercel).toContain("community-digest?kind=weekly");
+  });
+
   it("does not ship placeholder forum topic data", () => {
     const storePath = path.resolve(__dirname, "../lib/community-store.ts");
     const content = readFileSync(storePath, "utf8");

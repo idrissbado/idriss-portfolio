@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { createForumReply, deleteForumTopic, getForumTopicBySlug, updateForumTopic } from "@/lib/community-store";
 import { getPrivateFallbackNickname } from "@/lib/nickname";
+import { createMentionNotifications } from "@/lib/community-social";
 
 const replySchema = z.object({
   content: z.string().trim().min(2, "A reply cannot be empty."),
@@ -66,6 +67,13 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
     if (!reply) {
       return NextResponse.json({ error: "The discussion could not be found." }, { status: 404 });
     }
+
+    await createMentionNotifications({
+      authorId: session.user.id,
+      authorName: session.user.nickname || getPrivateFallbackNickname(session.user.id),
+      topicSlug: slug,
+      content: parsed.data.content,
+    });
 
     return NextResponse.json({ success: true, reply }, { status: 201 });
   } catch (error) {

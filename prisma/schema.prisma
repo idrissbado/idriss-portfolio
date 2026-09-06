@@ -65,8 +65,13 @@ model User {
   emailVerified         DateTime?
   verificationTokenHash String?
   verificationExpiresAt DateTime?
+  weeklyDigestEnabled Boolean   @default(true)
+  dailyGuidanceEnabled Boolean @default(true)
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
+  sentMessages          DirectMessage[] @relation("SentMessages")
+  receivedMessages      DirectMessage[] @relation("ReceivedMessages")
+  mentions              ForumMention[]
 }
 
 model Subscriber {
@@ -108,6 +113,34 @@ model ForumReply {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   topic        ForumTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+}
+
+model DirectMessage {
+  id          String   @id @default(cuid())
+  senderId    String
+  recipientId String
+  subject     String
+  content     String
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient   User     @relation("ReceivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, readAt, createdAt])
+  @@index([senderId, createdAt])
+}
+
+model ForumMention {
+  id        String   @id @default(cuid())
+  userId    String
+  topicSlug String
+  authorName String
+  excerpt   String
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
 }
 
 model Profile {

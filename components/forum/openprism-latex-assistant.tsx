@@ -17,7 +17,7 @@ function readImage(file: File) {
   });
 }
 
-export function OpenPrismLatexAssistant({ isAuthenticated }: { isAuthenticated: boolean }) {
+export function OpenPrismLatexAssistant({ isAuthenticated, onUseLatex }: { isAuthenticated: boolean; onUseLatex: (latex: string) => void }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [prompt, setPrompt] = useState("");
   const [imageDataUrl, setImageDataUrl] = useState("");
@@ -123,6 +123,7 @@ export function OpenPrismLatexAssistant({ isAuthenticated }: { isAuthenticated: 
             <div className="mt-3 text-sm leading-7 text-stone-700 dark:text-stone-200"><MathRenderer content={result.latex} /></div>
           </div>
           <div className="lg:col-span-2 rounded-xl border border-stone-200 bg-stone-50 p-4 text-sm leading-6 text-stone-700 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-300"><MathRenderer content={result.result} variant="compact" /></div>
+          <button type="button" onClick={() => onUseLatex(result.latex)} className="lg:col-span-2 rounded-full bg-stone-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-stone-700 dark:bg-stone-100 dark:text-stone-900">Use this LaTeX in a question</button>
         </div>
       ) : null}
     </div>

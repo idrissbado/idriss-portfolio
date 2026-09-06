@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { createForumTopic, getForumTopics } from "@/lib/community-store";
+import { createMentionNotifications } from "@/lib/community-social";
 import { getPrivateFallbackNickname } from "@/lib/nickname";
 
 const topicSchema = z.object({
@@ -82,6 +83,13 @@ export async function POST(request: Request) {
     if (!topic) {
       return NextResponse.json({ error: "Unable to publish the discussion." }, { status: 500 });
     }
+
+    await createMentionNotifications({
+      authorId: session.user.id,
+      authorName: session.user.nickname || getPrivateFallbackNickname(session.user.id),
+      topicSlug: topic.slug,
+      content: parsed.data.content,
+    });
 
     return NextResponse.json({ success: true, topic }, { status: 201 });
   } catch (error) {
