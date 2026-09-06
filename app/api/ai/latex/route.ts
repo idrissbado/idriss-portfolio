@@ -7,6 +7,7 @@ const MAX_IMAGE_LENGTH = 9_000_000;
 const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash";
 const DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile";
 const DEFAULT_GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
+const NON_CHAT_MODEL_PATTERN = /whisper|speech|audio|transcri|embed|rerank|guard|safety/i;
 
 class ProviderError extends Error {
   constructor(public readonly status: number, message: string) {
@@ -28,13 +29,17 @@ async function findAccessibleGroqModels(apiKey: string, endpoint: string, prefer
   const available = (payload.data ?? [])
     .filter((model) => model.active !== false && typeof model.id === "string")
     .map((model) => model.id as string);
+  const chatModels = available.filter((model) => !NON_CHAT_MODEL_PATTERN.test(model));
 
   if (!needsVision) {
-    return [preferredModel, ...available.filter((model) => model !== preferredModel)];
+    const preferred = NON_CHAT_MODEL_PATTERN.test(preferredModel) ? DEFAULT_GROQ_MODEL : preferredModel;
+    return [preferred, ...chatModels.filter((model) => model !== preferred)];
   }
 
-  const visionCandidates = available.filter((model) => /vision|vl|scout|maverick/i.test(model));
-  return [preferredModel, ...visionCandidates.filter((model) => model !== preferredModel)];
+  const preferred = NON_CHAT_MODEL_PATTERN.test(preferredModel) ? DEFAULT_GROQ_MODEL : preferredModel;
+  const visionCandidates = chatModels.filter((model) => /vision|vl|scout|maverick|qwen/i.test(model));
+  const preferredCandidates = /vision|vl|scout|maverick|qwen/i.test(preferred) ? [preferred] : [];
+  return [...preferredCandidates, ...visionCandidates.filter((model) => model !== preferred), ...(preferredCandidates.length === 0 ? [preferred] : [])];
 }
 
 function jsonError(message: string, status: number) {
