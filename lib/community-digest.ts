@@ -14,24 +14,35 @@ export async function sendCommunityDigest(kind: "weekly" | "daily") {
   if (!apiKey) return { sent: 0, skipped: true };
 
   const since = new Date(Date.now() - (kind === "weekly" ? 7 : 1) * 24 * 60 * 60 * 1000);
-  const [users, topics] = await Promise.all([
+  const [users, topics, postedAuthors] = await Promise.all([
     prisma.user.findMany({
       where: { emailVerified: { not: null }, ...(kind === "weekly" ? { weeklyDigestEnabled: true } : { dailyGuidanceEnabled: true }) },
-      select: { email: true, nickname: true },
+      select: { email: true, nickname: true, name: true },
     }),
     prisma.forumTopic.findMany({ where: { published: true, createdAt: { gte: since } }, orderBy: { createdAt: "desc" }, take: 8, select: { title: true, slug: true, category: true } }),
+    prisma.forumTopic.findMany({ where: { published: true, authorEmail: { not: null } }, distinct: ["authorEmail"], select: { authorEmail: true } }),
   ]);
 
   if (users.length === 0) return { sent: 0, skipped: false };
 
   const resend = new Resend(apiKey);
   const fromAddress = process.env.RESEND_FROM ?? "Idriss Olivier Bado <noreply@idrissbado.blog>";
+  const postedEmails = new Set(postedAuthors.map((topic) => topic.authorEmail?.trim().toLowerCase()).filter(Boolean));
   const subject = kind === "weekly" ? "Your weekly mathematics exercises / Vos exercices mathématiques de la semaine" : "Daily forum guide / Guide quotidien du forum";
   const topicList = topics.length > 0
     ? topics.map((topic) => `<li><a href="${getSiteUrl()}/forum/${encodeURIComponent(topic.slug)}">${escapeHtml(topic.title)}</a> <small>(${escapeHtml(topic.category)})</small></li>`).join("")
     : "<li>No new exercise yet. Create one and invite the community.</li>";
-  const html = `<div style="font-family:Arial,sans-serif;line-height:1.7;color:#172033;max-width:680px;margin:auto"><h2>Mathematics community</h2><p><strong>English</strong><br>${kind === "weekly" ? "Here are this week's latest exercises and discussions." : "Today: choose a precise title, include your assumptions, add LaTeX with $...$ or $$...$$, choose tags, and mention a member with @nickname."}</p><p><strong>Français</strong><br>${kind === "weekly" ? "Voici les derniers exercices et discussions de la semaine." : "Aujourd'hui : choisissez un titre précis, ajoutez vos hypothèses, écrivez les formules en LaTeX avec $...$ ou $$...$$, choisissez des tags et mentionnez un membre avec @pseudo."}</p><ul>${topicList}</ul><p><a href="${getSiteUrl()}/forum" style="display:inline-block;background:#0f766e;color:#fff;padding:10px 16px;border-radius:999px;text-decoration:none">Open forum / Ouvrir le forum</a></p></div>`;
-
-  const result = await resend.batch.send(users.map((user) => ({ from: fromAddress, to: [user.email], subject, html, text: `Mathematics community / Communaute mathematique\n\n${kind === "weekly" ? "Latest exercises / Derniers exercices" : "Create a precise post with LaTeX, tags, and @mentions / Creez un post precis avec LaTeX, tags et @mentions"}\n\n${topics.map((topic) => `${topic.title}: ${getSiteUrl()}/forum/${topic.slug}`).join("\n")}` })));
+  const result = await resend.batch.send(users.map((user) => {
+    const needsPostingNudge = kind === "daily" && !postedEmails.has(user.email.trim().toLowerCase());
+    const greeting = escapeHtml(user.nickname || user.name || "member");
+    const postingNudge = needsPostingNudge
+      ? `<div style="margin:20px 0;padding:16px 18px;border-left:4px solid #0f766e;background:#f0fdfa"><strong>English</strong><br>${greeting}, you have not published a question yet. Your perspective can help the community: choose one problem, explain what you tried, add the relevant tags, and invite a member with @nickname.<br><br><strong>Français</strong><br>${greeting}, vous n'avez pas encore publié de question. Votre contribution peut aider la communauté : choisissez un problème, expliquez votre démarche, ajoutez les tags appropriés et invitez un membre avec @pseudo.</div>`
+      : "";
+    const english = kind === "weekly" ? "Here are this week's latest exercises and discussions." : "Today: choose a precise title, include your assumptions, add LaTeX with $...$ or $$...$$, choose tags, and mention a member with @nickname.";
+    const french = kind === "weekly" ? "Voici les derniers exercices et discussions de la semaine." : "Aujourd'hui : choisissez un titre précis, ajoutez vos hypothèses, écrivez les formules en LaTeX avec $...$ ou $$...$$, choisissez des tags et mentionnez un membre avec @pseudo.";
+    const html = `<div style="font-family:Arial,sans-serif;line-height:1.7;color:#172033;max-width:680px;margin:auto"><h2>Mathematics community</h2>${postingNudge}<p><strong>English</strong><br>${english}</p><p><strong>Français</strong><br>${french}</p><ul>${topicList}</ul><p><a href="${getSiteUrl()}/forum" style="display:inline-block;background:#0f766e;color:#fff;padding:10px 16px;border-radius:999px;text-decoration:none">Open forum / Ouvrir le forum</a></p></div>`;
+    const text = `Mathematics community / Communaute mathematique\n\n${needsPostingNudge ? `${greeting}, you have not published a question yet. Create one in English or French / vous n'avez pas encore publie de question. Creez-en une en anglais ou en francais.\n\n` : ""}${kind === "weekly" ? "Latest exercises / Derniers exercices" : "Create a precise post with LaTeX, tags, and @mentions / Creez un post precis avec LaTeX, tags et @mentions"}\n\n${topics.map((topic) => `${topic.title}: ${getSiteUrl()}/forum/${topic.slug}`).join("\n")}`;
+    return { from: fromAddress, to: [user.email], subject, html, text };
+  }));
   return { sent: users.length, id: result.data?.id ?? null, skipped: false };
 }
