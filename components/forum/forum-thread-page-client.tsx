@@ -64,6 +64,7 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
     );
   };
   const votes = Math.max(replies.length + 1, 1);
+  const viewCount = Number(question.viewCount ?? 0);
 
   const handleNicknameClaimed = (previousNickname: string, nickname: string) => {
     const previous = previousNickname.trim().toLowerCase();
@@ -439,7 +440,7 @@ export function ForumThreadPageClient({ topic }: { topic: ForumTopic }) {
               {[
                 { label: "Votes", value: votes },
                 { label: "Answers", value: replies.length },
-                { label: "Views", value: Math.max(replies.length * 17 + 33, 42) },
+                { label: "Views", value: viewCount },
               ].map((stat) => (
                 <div key={stat.label} className="rounded-2xl border border-stone-200 bg-stone-50/80 px-3 py-3 text-center shadow-inner dark:border-stone-800 dark:bg-stone-950/60">
                   <div className="text-[10px] uppercase tracking-[0.18em] text-stone-500 dark:text-stone-400">{stat.label}</div>

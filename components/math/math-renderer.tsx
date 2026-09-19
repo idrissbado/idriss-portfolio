@@ -193,18 +193,27 @@ function createRehypePlugins(macros: Record<string, string>, suppressErrors: boo
 type MathSvgComponentProps = {
   children?: ReactNode;
   display?: string;
+  macros?: unknown;
 };
 
 function createMathSvgComponents(macros: Record<string, string>, suppressErrors: boolean) {
   return {
-    "math-svg": ({ children, display }: MathSvgComponentProps) => (
-      <MathSvgRenderer
-        latex={String(children ?? "")}
-        display={display === "true"}
-        macros={macros}
-        showError={!suppressErrors}
-      />
-    ),
+    "math-svg": ({ children, display, macros: injectedMacros }: MathSvgComponentProps) => {
+      const safeMacros = injectedMacros && typeof injectedMacros === "object" && !Array.isArray(injectedMacros)
+        ? Object.fromEntries(
+            Object.entries(injectedMacros as Record<string, unknown>).filter(([, value]) => typeof value === "string"),
+          ) as Record<string, string>
+        : macros;
+
+      return (
+        <MathSvgRenderer
+          latex={String(children ?? "")}
+          display={display === "true"}
+          macros={safeMacros}
+          showError={!suppressErrors}
+        />
+      );
+    },
   } as unknown as NonNullable<ComponentProps<typeof ReactMarkdown>["components"]>;
 }
 

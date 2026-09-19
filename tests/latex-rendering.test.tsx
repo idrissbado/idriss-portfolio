@@ -396,6 +396,27 @@ $\vec v,\ \hat x,\ \overline{AB},\ \underbrace{x+\cdots+x}_{n\text{ terms}},\ \m
     expect(listDocument.content).toContain("1.");
   });
 
+  it("supports lightweight labels and cross-references without fragile numbering logic", () => {
+    const html = renderMath(String.raw`$$
+\label{eq:test}
+\sum_{i=1}^{n} a_i = S_n
+\tag{1}
+$$
+and then \ref{eq:test} and \eqref{eq:test}.`);
+
+    expect(html).not.toContain("\\label");
+    expect(html).not.toContain("\\ref");
+    expect(html).not.toContain("\\eqref");
+    expect(html).toContain("eq:test");
+  });
+
+  it("uses the persisted post view count instead of a synthetic estimate", () => {
+    const threadPage = readFileSync(path.resolve(__dirname, "../components/forum/forum-thread-page-client.tsx"), "utf8");
+
+    expect(threadPage).toContain("question.viewCount");
+    expect(threadPage).not.toContain("Math.max(replies.length * 17 + 33, 42)");
+  });
+
   it("routes an unknown KaTeX command to the broader renderer without showing raw commands", () => {
     const html = renderMath(String.raw`$\notARealCommand{x}$`);
 

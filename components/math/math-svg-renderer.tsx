@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 type MathSvgRendererProps = {
   latex: string;
   display?: boolean;
-  macros?: Record<string, string>;
+  macros?: Record<string, string> | unknown;
   showError?: boolean;
 };
 
@@ -14,9 +14,24 @@ type RenderState =
   | { status: "ready"; url: string }
   | { status: "error" };
 
+function sanitizeMacros(value: unknown): Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  const entries = Object.entries(value as Record<string, unknown>);
+  return entries.reduce<Record<string, string>>((result, [key, item]) => {
+    if (typeof key === "string" && typeof item === "string") {
+      result[key] = item;
+    }
+    return result;
+  }, {});
+}
+
 export function MathSvgRenderer({ latex, display = true, macros = {}, showError = true }: MathSvgRendererProps) {
   const [state, setState] = useState<RenderState>({ status: "loading" });
-  const requestBody = JSON.stringify({ latex, display, macros });
+  const safeMacros = sanitizeMacros(macros);
+  const requestBody = JSON.stringify({ latex, display, macros: safeMacros });
 
   useEffect(() => {
     const controller = new AbortController();

@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "ForumTopic"
+ADD COLUMN "viewCount" INTEGER NOT NULL DEFAULT 0;

@@ -36,6 +36,7 @@ export type ForumTopic = {
   authorName: string;
   authorEmail: string | null;
   published: boolean;
+  viewCount: number;
   createdAt: string;
   updatedAt: string;
   replies: ForumReplyRecord[];
@@ -145,6 +146,7 @@ const normalizeTopic = (topic: {
   authorName: string;
   authorEmail?: string | null;
   published?: boolean | null;
+  viewCount?: number | null;
   createdAt: Date;
   updatedAt: Date;
   replies?: Array<{
@@ -181,6 +183,7 @@ const normalizeTopic = (topic: {
     authorName: topic.authorName,
     authorEmail: null,
     published: Boolean(topic.published),
+    viewCount: Number(topic.viewCount ?? 0),
     createdAt: new Date(topic.createdAt).toISOString(),
     updatedAt: new Date(topic.updatedAt).toISOString(),
     replies: (topic.replies ?? []).map(normalizeReply),
@@ -418,6 +421,7 @@ export async function createForumTopic(input: {
       authorName,
       authorEmail: null,
       published: true,
+      viewCount: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       replies: [],
@@ -513,6 +517,7 @@ export async function updateForumTopic(input: {
       excerpt: nextExcerpt ?? topic.excerpt ?? null,
       imageUrl: nextImageUrl ?? topic.imageUrl ?? null,
       imageAltText: nextImageUrl ? (nextImageAltText ?? topic.imageAltText ?? "Attached image") : null,
+      viewCount: Number(topic.viewCount ?? 0),
       updatedAt: new Date().toISOString(),
     } satisfies ForumTopic;
 
@@ -736,6 +741,37 @@ export async function deleteForumReply(input: {
 
     topic.replies.splice(targetIndex, 1);
     return true;
+  }
+}
+
+export async function incrementForumTopicViews(slug: string) {
+  try {
+    const topic = await prisma.forumTopic.update({
+      where: { slug },
+      data: { viewCount: { increment: 1 } },
+      include: { replies: { orderBy: { createdAt: "asc" } } },
+    });
+
+    return normalizeTopic(topic);
+  } catch (error) {
+    console.error("Forum topic view increment failed:", error);
+    const topic = fallbackTopics.find((item) => item.slug === slug);
+    if (!topic) {
+      return null;
+    }
+
+    const updated = {
+      ...topic,
+      viewCount: Number(topic.viewCount ?? 0) + 1,
+      updatedAt: new Date().toISOString(),
+    } satisfies ForumTopic;
+
+    const index = fallbackTopics.findIndex((item) => item.slug === slug);
+    if (index >= 0) {
+      fallbackTopics[index] = updated;
+    }
+
+    return updated;
   }
 }
 

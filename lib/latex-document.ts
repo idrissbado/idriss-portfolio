@@ -65,6 +65,7 @@ type LatexMetadata = {
 };
 
 type LatexDeclarations = {
+  labels: Record<string, string>;
   macros: Record<string, string>;
   metadata: LatexMetadata;
   theoremNames: Record<string, string>;
@@ -323,9 +324,27 @@ function parseMetadataCommand(content: string, index: number) {
   };
 }
 
+function parseLabelCommand(content: string, index: number) {
+  const command = readControlSequence(content, index);
+  if (!command || !["\\label"].includes(command.name)) {
+    return null;
+  }
+
+  const argument = readRequiredArgument(content, command.end);
+  if (!argument) {
+    return null;
+  }
+
+  return {
+    end: argument.end,
+    value: argument.value.trim(),
+  };
+}
+
 function collectDeclarations(content: string): LatexDeclarations {
   const searchable = maskFencedCode(content);
   const declarations: LatexDeclarations = {
+    labels: {},
     macros: {},
     metadata: {},
     theoremNames: { ...DEFAULT_THEOREM_NAMES },
@@ -359,6 +378,13 @@ function collectDeclarations(content: string): LatexDeclarations {
     if (metadata) {
       declarations.metadata[metadata.key] = metadata.value;
       cursor = metadata.end - 1;
+      continue;
+    }
+
+    const label = parseLabelCommand(content, cursor);
+    if (label) {
+      declarations.labels[label.value] = label.value;
+      cursor = label.end - 1;
     }
   }
 
@@ -722,6 +748,10 @@ function transformCommand(content: string, index: number, context: TransformCont
   if (metadataDeclaration) {
     return { end: metadataDeclaration.end, output: "" };
   }
+  const labelDeclaration = parseLabelCommand(content, index);
+  if (labelDeclaration) {
+    return { end: labelDeclaration.end, output: "" };
+  }
 
   if (command.name === "\\\\" || command.name === "\\newline" || command.name === "\\linebreak") {
     return { end: command.end, output: "  \n" };
@@ -816,11 +846,12 @@ function transformCommand(content: string, index: number, context: TransformCont
   if (["\\ref", "\\eqref", "\\autoref", "\\cref", "\\Cref"].includes(command.name)) {
     const label = readRequiredArgument(content, command.end);
     if (label) {
-      const value = label.value.replaceAll(":", " ").replaceAll("-", " ");
+      const key = label.value.trim();
+      const value = context.labels[key] ?? key.replaceAll(":", " ").replaceAll("-", " ");
       return { end: label.end, output: command.name === "\\eqref" ? `(${value})` : value };
     }
   }
-  if (command.name === "\\label" || command.name === "\\index") {
+  if (command.name === "\\index") {
     const label = readRequiredArgument(content, command.end);
     return { end: label?.end ?? command.end, output: "" };
   }
