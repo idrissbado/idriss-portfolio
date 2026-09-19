@@ -385,6 +385,17 @@ $\vec v,\ \hat x,\ \overline{AB},\ \underbrace{x+\cdots+x}_{n\text{ terms}},\ \m
     expect(layout.indexOf('import "katex/dist/katex.min.css"')).toBeLessThan(layout.indexOf('import "./globals.css"'));
   });
 
+  it("preserves text-mode commands inside formulas and keeps document lists structured", () => {
+    const textFormula = prepareLatexDocument(String.raw`$$x=0 \quad \text{pour tout } x\in A$$`);
+    const normalizedMbox = normalizeLatexDelimiters(String.raw`$$x=0 \quad \mbox{pour tout }x\in A.$$`);
+    const listDocument = prepareLatexDocument(String.raw`\begin{enumerate}\item Première question.\item Deuxième question.\end{enumerate}`);
+
+    expect(textFormula.content).toContain("\\text{pour tout }");
+    expect(normalizedMbox).toContain("\\text{pour tout }");
+    expect(listDocument.content).not.toContain("\\begin{enumerate}");
+    expect(listDocument.content).toContain("1.");
+  });
+
   it("routes an unknown KaTeX command to the broader renderer without showing raw commands", () => {
     const html = renderMath(String.raw`$\notARealCommand{x}$`);
 

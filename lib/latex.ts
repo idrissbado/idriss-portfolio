@@ -88,6 +88,10 @@ function trimHorizontalWhitespaceEnd(content: string) {
  * payload between delimiters is copied verbatim; braces, backslashes, and
  * command structure are never parsed or rewritten here.
  */
+function normalizeTextModeCommands(content: string) {
+  return content.replace(/\\mbox\s*\{/g, "\\text{");
+}
+
 function normalizeAlternativeDelimiters(content: string, inlineOnly: boolean) {
   let result = "";
   let inlineCodeTicks = 0;
@@ -325,7 +329,8 @@ function normalizeOutsideFencedCode(content: string, inlineOnly: boolean) {
   let result = "";
 
   const flushPendingText = () => {
-    const alternativeDelimiters = normalizeAlternativeDelimiters(pendingText, inlineOnly);
+    const textCommandsNormalized = normalizeTextModeCommands(pendingText);
+    const alternativeDelimiters = normalizeAlternativeDelimiters(textCommandsNormalized, inlineOnly);
     const dollarDelimiters = normalizeDollarDelimiters(alternativeDelimiters, inlineOnly);
     result += wrapStandaloneEnvironments(dollarDelimiters, inlineOnly);
     pendingText = "";
